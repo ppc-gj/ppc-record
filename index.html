@@ -1082,17 +1082,28 @@
                     }
                 });
                 
-                // Render History Log
+                // Render History Log + BEST 표시
+                const bestValue = MASTER_DATA[activeChartTab].isLowerBetter
+                    ? Math.min(...filteredRecords.map(r => Number(r.values[activeChartTab])))
+                    : Math.max(...filteredRecords.map(r => Number(r.values[activeChartTab])));
+
                 document.getElementById('history-log').innerHTML = [...filteredRecords].reverse().map((r, i) => {
                     const isNewest = i === 0;
+                    const currentValue = Number(r.values[activeChartTab]);
+                    const isBest = currentValue === bestValue;
                     return `
-                        <div class="bg-white p-4 rounded-2xl border border-slate-100 flex justify-between items-center shadow-sm transition-all hover:shadow-md">
-                            <div class="flex items-center gap-3">
-                                <div class="w-2 h-2 rounded-full ${isNewest ? 'bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.6)]' : 'bg-slate-300'}"></div>
-                                <span class="text-xs font-bold text-slate-500">${r.date}</span>
+                        <div class="${isBest ? 'bg-yellow-50 border-yellow-300 shadow-yellow-100' : 'bg-white border-slate-100'} p-4 rounded-2xl border flex justify-between items-center shadow-sm transition-all hover:shadow-md">
+                            <div class="flex items-center gap-3 min-w-0">
+                                <div class="w-2 h-2 rounded-full ${isBest ? 'bg-yellow-400 shadow-[0_0_8px_rgba(250,204,21,0.8)]' : (isNewest ? 'bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.6)]' : 'bg-slate-300')}"></div>
+                                <div class="min-w-0">
+                                    <div class="flex items-center gap-1.5 flex-wrap">
+                                        <span class="text-xs font-bold ${isBest ? 'text-yellow-800' : 'text-slate-500'}">${r.date}</span>
+                                        ${isBest ? '<span class="text-[9px] font-black text-yellow-900 bg-yellow-300 px-2 py-0.5 rounded-full border border-yellow-400">BEST</span>' : ''}
+                                    </div>
+                                </div>
                             </div>
-                            <span class="text-sm font-black text-slate-800 bg-slate-50 px-3 py-1 rounded-lg border border-slate-100">
-                                ${r.values[activeChartTab]}<span class="text-[10px] text-slate-400 ml-1">${MASTER_DATA[activeChartTab].unit}</span>
+                            <span class="text-sm font-black ${isBest ? 'text-yellow-900 bg-yellow-200 border-yellow-300' : 'text-slate-800 bg-slate-50 border-slate-100'} px-3 py-1 rounded-lg border">
+                                ${r.values[activeChartTab]}<span class="text-[10px] ${isBest ? 'text-yellow-700' : 'text-slate-400'} ml-1">${MASTER_DATA[activeChartTab].unit}</span>
                             </span>
                         </div>
                     `;
