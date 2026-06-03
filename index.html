@@ -445,13 +445,24 @@
 <section id="admin-view" class="view-section hidden-view flex-1 p-6 space-y-4">
     
     <div class="flex justify-between items-center">
-        <h2 class="text-2xl font-black text-slate-900">회원 관리</h2>
+        <div>
+            <h2 class="text-2xl font-black text-slate-900">관리자 모드</h2>
+            <p class="text-xs font-bold text-slate-400 mt-1">회원관리와 로그인기록을 확인할 수 있습니다.</p>
+        </div>
         <button onclick="logout()" class="bg-slate-900 text-white px-4 py-2 rounded-xl text-sm font-bold">
             로그아웃
         </button>
     </div>
 
+    <div class="bg-slate-200/70 p-1 rounded-2xl grid grid-cols-3 gap-1">
+        <button id="admin-tab-users" onclick="showAdminTab('users')" class="admin-tab-btn bg-white text-indigo-600 shadow px-3 py-3 rounded-xl text-xs font-black">회원관리</button>
+        <button id="admin-tab-logs" onclick="showAdminTab('logs')" class="admin-tab-btn text-slate-500 px-3 py-3 rounded-xl text-xs font-black">로그인기록</button>
+        <button id="admin-tab-inactive" onclick="showAdminTab('inactive')" class="admin-tab-btn text-slate-500 px-3 py-3 rounded-xl text-xs font-black">미접속학생</button>
+    </div>
+
     <div id="admin-user-list" class="space-y-3"></div>
+    <div id="admin-login-log-list" class="space-y-3 hidden"></div>
+    <div id="admin-inactive-list" class="space-y-3 hidden"></div>
 
 </section>
 
@@ -712,6 +723,7 @@
                     
                     initApp();
                     showView('measure');
+                    await saveLoginLog(user);
                     showToast(`환영합니다, ${user.name}님!`, 'success');
                 } else {
                     showToast('아이디 또는 비밀번호가 틀렸습니다.', 'error');
@@ -1533,6 +1545,464 @@
             const index = users.findIndex(u => u.docId === docId || u.id === currentUser.id);
             if(index !== -1) users[index] = currentUser;
         }
+
+function formatAdminDate(value) {
+    try {
+        let d;
+        if(value && typeof value.toDate === 'function') d = value.toDate();
+        else if(value) d = new Date(value);
+        else d = new Date();
+        if(isNaN(d.getTime())) return '-';
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth()+1).padStart(2,'0');
+        const dd = String(d.getDate()).padStart(2,'0');
+        const hh = String(d.getHours()).padStart(2,'0');
+        const mi = String(d.getMinutes()).padStart(2,'0');
+        return `${yyyy}.${mm}.${dd} ${hh}:${mi}`;
+    } catch(e) { return '-'; }
+}
+
+function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>'"]/g, function(ch) {
+        return ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'})[ch];
+    });
+}
+
+async function saveLoginLog(user) {
+    try {
+        const payload = {
+            userId: user.id || '',
+            userName: user.name || '',
+            school: user.school || '',
+            grade: user.grade || '',
+            type: user.type || '',
+            phone: user.phone || '',
+            college: user.college || '',
+            loggedAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+        await db.collection('loginLogs').add(payload);
+        await db.collection('users').doc(user.docId || getUserDocId(user.id)).set({
+            lastLoginAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+    } catch(error) {
+        console.warn('로그인 기록 저장 실패', error);
+    }
+}
+
+async function loadLoginLogsFromFirestore() {
+    try {
+        const snapshot = await db.collection('loginLogs').orderBy('loggedAt', 'desc').limit(500).get();
+        return snapshot.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
+    } catch(error) {
+        console.warn('orderBy 로그인기록 조회 실패, 기본 조회로 재시도', error);
+        const snapshot = await db.collection('loginLogs').limit(500).get();
+        return snapshot.docs.map(doc => ({ docId: doc.id, ...doc.data() }))
+            .sort((a,b) => {
+                const ad = a.loggedAt && typeof a.loggedAt.toDate === 'function' ? a.loggedAt.toDate().getTime() : 0;
+                const bd = b.loggedAt && typeof b.loggedAt.toDate === 'function' ? b.loggedAt.toDate().getTime() : 0;
+                return bd - ad;
+            });
+    }
+}
+
+
+let adminLoginLogsCache = null;
+let adminCurrentLogMode = 'today';
+let adminCurrentLogDate = getAdminTodayKey();
+let adminLogSearchText = '';
+let adminInactiveDays = 7;
+
+function showAdminTab(tab) {
+    const usersBox = document.getElementById('admin-user-list');
+    const logsBox = document.getElementById('admin-login-log-list');
+    const inactiveBox = document.getElementById('admin-inactive-list');
+    const usersBtn = document.getElementById('admin-tab-users');
+    const logsBtn = document.getElementById('admin-tab-logs');
+    const inactiveBtn = document.getElementById('admin-tab-inactive');
+
+    [usersBox, logsBox, inactiveBox].forEach(box => box && box.classList.add('hidden'));
+    [usersBtn, logsBtn, inactiveBtn].forEach(btn => {
+        if(btn) btn.className = 'admin-tab-btn text-slate-500 px-3 py-3 rounded-xl text-xs font-black';
+    });
+
+    if(tab === 'logs') {
+        logsBox.classList.remove('hidden');
+        logsBtn.className = 'admin-tab-btn bg-white text-indigo-600 shadow px-3 py-3 rounded-xl text-xs font-black';
+        renderLoginLogPage();
+    } else if(tab === 'inactive') {
+        inactiveBox.classList.remove('hidden');
+        inactiveBtn.className = 'admin-tab-btn bg-white text-indigo-600 shadow px-3 py-3 rounded-xl text-xs font-black';
+        renderInactiveStudentsPage();
+    } else {
+        usersBox.classList.remove('hidden');
+        usersBtn.className = 'admin-tab-btn bg-white text-indigo-600 shadow px-3 py-3 rounded-xl text-xs font-black';
+        renderAdminPage();
+    }
+}
+
+function adminPad(n) { return String(n).padStart(2, '0'); }
+function getAdminDateKey(date) {
+    return `${date.getFullYear()}-${adminPad(date.getMonth()+1)}-${adminPad(date.getDate())}`;
+}
+function getAdminTodayKey() { return getAdminDateKey(new Date()); }
+function getAdminOffsetKey(offsetDays) {
+    const d = new Date();
+    d.setDate(d.getDate() + offsetDays);
+    return getAdminDateKey(d);
+}
+function adminToDate(value) {
+    if(!value) return null;
+    if(value && typeof value.toDate === 'function') return value.toDate();
+    if(value instanceof Date) return value;
+    if(typeof value === 'string' || typeof value === 'number') {
+        const d = new Date(value);
+        return isNaN(d.getTime()) ? null : d;
+    }
+    return null;
+}
+function adminDateLabel(key) {
+    if(!key) return '전체';
+    const d = new Date(key + 'T00:00:00');
+    if(isNaN(d.getTime())) return key;
+    const yoil = ['일','월','화','수','목','금','토'][d.getDay()];
+    return `${key} (${yoil})`;
+}
+function adminGradeLabel(grade) {
+    if(!grade) return '-';
+    return grade === 'N' ? 'N수생' : `${grade}학년`;
+}
+function getFilteredLoginLogs(logs) {
+    const today = new Date(getAdminTodayKey() + 'T00:00:00');
+    const q = (adminLogSearchText || '').trim().toLowerCase();
+    return logs.filter(log => {
+        const d = adminToDate(log.loggedAt);
+        const key = d ? getAdminDateKey(d) : '';
+        let passDate = true;
+        if(adminCurrentLogMode === 'date') passDate = key === adminCurrentLogDate;
+        if(adminCurrentLogMode === 'today') passDate = key === getAdminTodayKey();
+        if(adminCurrentLogMode === 'yesterday') passDate = key === getAdminOffsetKey(-1);
+        if(adminCurrentLogMode === 'week') {
+            if(!d) passDate = false;
+            else {
+                const start = new Date(today);
+                start.setDate(start.getDate() - 6);
+                passDate = d >= start && d < new Date(today.getTime() + 24*60*60*1000);
+            }
+        }
+        if(!passDate) return false;
+        if(!q) return true;
+        const text = `${log.userName||''} ${log.userId||''} ${log.school||''} ${log.grade||''} ${log.type||''}`.toLowerCase();
+        return text.includes(q);
+    });
+}
+function setAdminLogMode(mode) {
+    adminCurrentLogMode = mode;
+    if(mode === 'today') adminCurrentLogDate = getAdminTodayKey();
+    if(mode === 'yesterday') adminCurrentLogDate = getAdminOffsetKey(-1);
+    renderLoginLogPage(true);
+}
+function setAdminLogDate(value) {
+    adminCurrentLogDate = value || getAdminTodayKey();
+    adminCurrentLogMode = 'date';
+    renderLoginLogPage(true);
+}
+function setAdminLogSearch(value) {
+    adminLogSearchText = value || '';
+    renderLoginLogPage(true);
+}
+function adminModeButtonClass(mode) {
+    return adminCurrentLogMode === mode
+        ? 'bg-indigo-600 text-white shadow-indigo-100 shadow px-3 py-2 rounded-xl text-xs font-black'
+        : 'bg-white text-slate-500 border border-slate-100 px-3 py-2 rounded-xl text-xs font-black';
+}
+function makeAdminSummaryCards(allLogs, filteredLogs) {
+    const todayKey = getAdminTodayKey();
+    const monthKey = todayKey.slice(0,7);
+    const todayCount = allLogs.filter(l => {
+        const d = adminToDate(l.loggedAt); return d && getAdminDateKey(d) === todayKey;
+    }).length;
+    const weekStart = new Date(todayKey + 'T00:00:00');
+    weekStart.setDate(weekStart.getDate() - 6);
+    const weekCount = allLogs.filter(l => {
+        const d = adminToDate(l.loggedAt); return d && d >= weekStart;
+    }).length;
+    const monthCount = allLogs.filter(l => {
+        const d = adminToDate(l.loggedAt); return d && getAdminDateKey(d).startsWith(monthKey);
+    }).length;
+    const uniqueStudents = new Set(filteredLogs.map(l => l.userId || l.userName).filter(Boolean)).size;
+    return `
+        <div class="grid grid-cols-2 gap-2">
+            <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
+                <p class="text-[10px] font-black text-slate-400">선택기간 로그인</p>
+                <p class="text-2xl font-black text-indigo-600 mt-1">${filteredLogs.length}<span class="text-xs text-slate-400 ml-1">건</span></p>
+                <p class="text-[10px] font-bold text-slate-400 mt-1">학생 ${uniqueStudents}명</p>
+            </div>
+            <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
+                <p class="text-[10px] font-black text-slate-400">오늘 / 7일 / 이번달</p>
+                <p class="text-lg font-black text-slate-900 mt-2">${todayCount} / ${weekCount} / ${monthCount}</p>
+                <p class="text-[10px] font-bold text-slate-400 mt-1">전체 최근기록 기준</p>
+            </div>
+        </div>
+    `;
+}
+function countBy(items, keyFn) {
+    const map = new Map();
+    items.forEach(item => {
+        const key = keyFn(item) || '-';
+        map.set(key, (map.get(key) || 0) + 1);
+    });
+    return [...map.entries()].sort((a,b)=>b[1]-a[1]);
+}
+function makeTopLoginStudents(filteredLogs) {
+    const grouped = new Map();
+    filteredLogs.forEach(log => {
+        const key = log.userId || log.userName || '-';
+        if(!grouped.has(key)) grouped.set(key, { count:0, name:log.userName || '-', school:log.school || '-', userId:log.userId || '-' });
+        const row = grouped.get(key);
+        row.count += 1;
+        row.name = row.name === '-' ? (log.userName || '-') : row.name;
+        row.school = row.school === '-' ? (log.school || '-') : row.school;
+    });
+    const top = [...grouped.values()].sort((a,b)=>b.count-a.count).slice(0,10);
+    if(top.length === 0) return '';
+    return `
+        <div class="bg-white rounded-[2rem] p-5 border border-slate-100 shadow-sm space-y-3">
+            <div class="flex items-center justify-between">
+                <h3 class="font-black text-slate-900">TOP 로그인 학생</h3>
+                <span class="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-1 rounded-full">TOP 10</span>
+            </div>
+            <div class="space-y-2">
+                ${top.map((row, idx) => `
+                    <div class="flex items-center gap-3 bg-slate-50 rounded-2xl p-3">
+                        <div class="w-7 h-7 rounded-full ${idx < 3 ? 'bg-amber-100 text-amber-700' : 'bg-white text-slate-500'} flex items-center justify-center text-xs font-black">${idx+1}</div>
+                        <div class="flex-1 min-w-0">
+                            <p class="font-black text-sm text-slate-900 truncate">${escapeHtml(row.name)}</p>
+                            <p class="text-[10px] font-bold text-slate-400 truncate">${escapeHtml(row.school)} · ID: ${escapeHtml(row.userId)}</p>
+                        </div>
+                        <p class="font-black text-indigo-600">${row.count}<span class="text-[10px] text-slate-400 ml-0.5">회</span></p>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    `;
+}
+function makeSchoolLoginStats(filteredLogs) {
+    const stats = countBy(filteredLogs, l => l.school || '학교 미입력').slice(0,10);
+    if(stats.length === 0) return '';
+    const max = Math.max(...stats.map(s => s[1]), 1);
+    return `
+        <div class="bg-white rounded-[2rem] p-5 border border-slate-100 shadow-sm space-y-3">
+            <div class="flex items-center justify-between">
+                <h3 class="font-black text-slate-900">학교별 로그인 통계</h3>
+                <span class="text-[10px] font-black text-slate-500 bg-slate-100 px-2 py-1 rounded-full">상위 10개</span>
+            </div>
+            <div class="space-y-2">
+                ${stats.map(([school, count]) => `
+                    <div class="space-y-1">
+                        <div class="flex justify-between text-xs font-bold">
+                            <span class="text-slate-700">${escapeHtml(school)}</span>
+                            <span class="text-slate-500">${count}건</span>
+                        </div>
+                        <div class="h-2 bg-slate-100 rounded-full overflow-hidden">
+                            <div class="h-2 bg-indigo-500 rounded-full" style="width:${Math.max(8, Math.round(count/max*100))}%"></div>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    `;
+}
+function makeLoginLogCards(filteredLogs) {
+    if(filteredLogs.length === 0) {
+        return `<div class="bg-white rounded-2xl p-6 text-center font-bold text-slate-400">조건에 맞는 로그인 기록이 없습니다.</div>`;
+    }
+    return filteredLogs.map(log => `
+        <div class="bg-white rounded-[2rem] p-5 shadow-sm border border-slate-100 space-y-3">
+            <div class="flex justify-between gap-3 items-start">
+                <div class="min-w-0">
+                    <h3 class="font-black text-lg text-slate-900 truncate">${escapeHtml(log.userName || '-')}</h3>
+                    <p class="text-xs font-bold text-slate-400 mt-1">ID: ${escapeHtml(log.userId || '-')}</p>
+                </div>
+                <div class="shrink-0 bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-full text-[11px] font-black">
+                    로그인
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2 text-sm">
+                <div class="bg-slate-50 rounded-xl p-3 col-span-2">
+                    <p class="text-slate-400 text-[10px] font-bold">로그인 시간</p>
+                    <p class="font-black text-slate-900">${formatAdminDate(log.loggedAt)}</p>
+                </div>
+                <div class="bg-slate-50 rounded-xl p-3">
+                    <p class="text-slate-400 text-[10px] font-bold">학교</p>
+                    <p class="font-bold">${escapeHtml(log.school || '-')}</p>
+                </div>
+                <div class="bg-slate-50 rounded-xl p-3">
+                    <p class="text-slate-400 text-[10px] font-bold">학년/전형</p>
+                    <p class="font-bold">${escapeHtml(adminGradeLabel(log.grade))} / ${escapeHtml(log.type || '-')}</p>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+async function renderLoginLogPage(keepCache = false) {
+    const container = document.getElementById('admin-login-log-list');
+    if(!keepCache || !adminLoginLogsCache) {
+        container.innerHTML = `
+            <div class="bg-white rounded-2xl p-6 text-center font-bold text-slate-400">
+                로그인 기록을 불러오는 중입니다...
+            </div>
+        `;
+    }
+
+    try {
+        if(!keepCache || !adminLoginLogsCache) {
+            adminLoginLogsCache = await loadLoginLogsFromFirestore();
+        }
+        const logs = adminLoginLogsCache || [];
+        if(logs.length === 0) {
+            container.innerHTML = `
+                <div class="bg-white rounded-2xl p-6 text-center font-bold text-slate-400">
+                    아직 저장된 로그인 기록이 없습니다.<br>
+                    <span class="text-[11px] font-medium">이 파일 적용 후부터 로그인 기록이 쌓입니다.</span>
+                </div>
+            `;
+            return;
+        }
+        const filteredLogs = getFilteredLoginLogs(logs);
+        const selectedLabel = adminCurrentLogMode === 'all' ? '전체 기간' : (adminCurrentLogMode === 'week' ? '최근 7일' : adminDateLabel(adminCurrentLogDate));
+        container.innerHTML = `
+            <div class="bg-white rounded-[2rem] p-5 border border-slate-100 shadow-sm space-y-3">
+                <div class="flex items-center justify-between gap-3">
+                    <div>
+                        <h3 class="font-black text-slate-900">로그인기록 조회</h3>
+                        <p class="text-[11px] font-bold text-slate-400 mt-1">${selectedLabel} 기준으로 표시됩니다.</p>
+                    </div>
+                    <button onclick="adminLoginLogsCache=null; renderLoginLogPage(false)" class="shrink-0 bg-slate-100 text-slate-600 px-3 py-2 rounded-xl text-xs font-black">새로고침</button>
+                </div>
+                <input type="date" value="${adminCurrentLogDate}" onchange="setAdminLogDate(this.value)" class="form-input py-3">
+                <div class="grid grid-cols-4 gap-2">
+                    <button onclick="setAdminLogMode('today')" class="${adminModeButtonClass('today')}">오늘</button>
+                    <button onclick="setAdminLogMode('yesterday')" class="${adminModeButtonClass('yesterday')}">어제</button>
+                    <button onclick="setAdminLogMode('week')" class="${adminModeButtonClass('week')}">최근7일</button>
+                    <button onclick="setAdminLogMode('all')" class="${adminModeButtonClass('all')}">전체</button>
+                </div>
+                <input type="text" value="${escapeHtml(adminLogSearchText)}" oninput="setAdminLogSearch(this.value)" placeholder="이름/아이디/학교 검색" class="form-input py-3">
+            </div>
+            ${makeAdminSummaryCards(logs, filteredLogs)}
+            ${makeTopLoginStudents(filteredLogs)}
+            ${makeSchoolLoginStats(filteredLogs)}
+            <div class="flex items-center justify-between px-1 pt-2">
+                <p class="text-sm font-black text-slate-800">로그인 목록</p>
+                <p class="text-[10px] font-bold text-slate-400">${filteredLogs.length}건</p>
+            </div>
+            ${makeLoginLogCards(filteredLogs)}
+        `;
+    } catch(error) {
+        console.error(error);
+        container.innerHTML = `
+            <div class="bg-white rounded-2xl p-6 text-center font-bold text-rose-500">
+                로그인 기록을 불러오지 못했습니다.<br>
+                <span class="text-[11px] text-slate-400">Firestore 규칙에서 loginLogs 컬렉션 권한을 확인해주세요.</span>
+            </div>
+        `;
+    }
+}
+function setAdminInactiveDays(days) {
+    adminInactiveDays = days;
+    renderInactiveStudentsPage(true);
+}
+function adminInactiveButtonClass(days) {
+    return adminInactiveDays === days
+        ? 'bg-rose-600 text-white shadow px-3 py-2 rounded-xl text-xs font-black'
+        : 'bg-white text-slate-500 border border-slate-100 px-3 py-2 rounded-xl text-xs font-black';
+}
+async function renderInactiveStudentsPage(keepCache = false) {
+    const container = document.getElementById('admin-inactive-list');
+    container.innerHTML = `
+        <div class="bg-white rounded-2xl p-6 text-center font-bold text-slate-400">
+            미접속 학생을 계산하는 중입니다...
+        </div>
+    `;
+    try {
+        await loadUsersFromFirestore();
+        if(!keepCache || !adminLoginLogsCache) adminLoginLogsCache = await loadLoginLogsFromFirestore();
+        const latestMap = new Map();
+        (adminLoginLogsCache || []).forEach(log => {
+            const key = log.userId || '';
+            const d = adminToDate(log.loggedAt);
+            if(!key || !d) return;
+            const prev = latestMap.get(key);
+            if(!prev || d > prev) latestMap.set(key, d);
+        });
+        const now = new Date();
+        const normalUsers = users.filter(u => u.id !== 'ppc');
+        const rows = normalUsers.map(user => {
+            const logDate = latestMap.get(user.id) || adminToDate(user.lastLoginAt);
+            const days = logDate ? Math.floor((new Date(getAdminTodayKey()+'T00:00:00') - new Date(getAdminDateKey(logDate)+'T00:00:00')) / (24*60*60*1000)) : null;
+            return { user, logDate, days };
+        }).filter(row => row.days === null || row.days >= adminInactiveDays)
+          .sort((a,b) => (b.days ?? 9999) - (a.days ?? 9999));
+
+        container.innerHTML = `
+            <div class="bg-white rounded-[2rem] p-5 border border-slate-100 shadow-sm space-y-3">
+                <div class="flex items-center justify-between gap-3">
+                    <div>
+                        <h3 class="font-black text-slate-900">미접속 학생</h3>
+                        <p class="text-[11px] font-bold text-slate-400 mt-1">선택한 기간 이상 로그인하지 않은 학생입니다.</p>
+                    </div>
+                    <button onclick="adminLoginLogsCache=null; renderInactiveStudentsPage(false)" class="shrink-0 bg-slate-100 text-slate-600 px-3 py-2 rounded-xl text-xs font-black">새로고침</button>
+                </div>
+                <div class="grid grid-cols-3 gap-2">
+                    <button onclick="setAdminInactiveDays(7)" class="${adminInactiveButtonClass(7)}">7일+</button>
+                    <button onclick="setAdminInactiveDays(14)" class="${adminInactiveButtonClass(14)}">14일+</button>
+                    <button onclick="setAdminInactiveDays(30)" class="${adminInactiveButtonClass(30)}">30일+</button>
+                </div>
+            </div>
+            <div class="bg-rose-50 border border-rose-100 rounded-2xl p-4 flex justify-between items-center">
+                <div>
+                    <p class="text-xs font-black text-rose-700">${adminInactiveDays}일 이상 미접속</p>
+                    <p class="text-[10px] font-bold text-rose-400 mt-1">로그인 기록이 없는 학생도 포함됩니다.</p>
+                </div>
+                <p class="text-2xl font-black text-rose-600">${rows.length}<span class="text-xs ml-1">명</span></p>
+            </div>
+            ${rows.length === 0 ? `<div class="bg-white rounded-2xl p-6 text-center font-bold text-slate-400">해당 조건의 미접속 학생이 없습니다.</div>` : rows.map(({user, logDate, days}) => `
+                <div class="bg-white rounded-[2rem] p-5 shadow-sm border border-slate-100 space-y-3">
+                    <div class="flex justify-between gap-3 items-start">
+                        <div class="min-w-0">
+                            <h3 class="font-black text-lg text-slate-900 truncate">${escapeHtml(user.name || '-')}</h3>
+                            <p class="text-xs font-bold text-slate-400 mt-1">ID: ${escapeHtml(user.id || '-')}</p>
+                        </div>
+                        <div class="shrink-0 bg-rose-50 text-rose-600 px-3 py-1.5 rounded-full text-[11px] font-black">
+                            ${days === null ? '기록없음' : days + '일'}
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 text-sm">
+                        <div class="bg-slate-50 rounded-xl p-3">
+                            <p class="text-slate-400 text-[10px] font-bold">학교</p>
+                            <p class="font-bold">${escapeHtml(user.school || '-')}</p>
+                        </div>
+                        <div class="bg-slate-50 rounded-xl p-3">
+                            <p class="text-slate-400 text-[10px] font-bold">학년/전형</p>
+                            <p class="font-bold">${escapeHtml(adminGradeLabel(user.grade))} / ${escapeHtml(user.type || '-')}</p>
+                        </div>
+                        <div class="bg-slate-50 rounded-xl p-3 col-span-2">
+                            <p class="text-slate-400 text-[10px] font-bold">마지막 로그인</p>
+                            <p class="font-black text-slate-900">${logDate ? formatAdminDate(logDate) : '아직 로그인 기록 없음'}</p>
+                        </div>
+                    </div>
+                </div>
+            `).join('')}
+        `;
+    } catch(error) {
+        console.error(error);
+        container.innerHTML = `
+            <div class="bg-white rounded-2xl p-6 text-center font-bold text-rose-500">
+                미접속 학생 정보를 불러오지 못했습니다.
+            </div>
+        `;
+    }
+}
+
 let isAdmin = false;
 
 // 관리자 로그인 모달 열기
@@ -1562,9 +2032,9 @@ async function handleAdminLogin() {
 
         closeAdminLogin();
 
-        await renderAdminPage();
-
         showAdminView();
+
+        showAdminTab('users');
 
         showToast('관리자 로그인 성공', 'success');
 
