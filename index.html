@@ -276,6 +276,17 @@
 .admin-best-empty{background:#fff;border:1px dashed #cbd5e1;border-radius:1.5rem;padding:2rem 1rem;text-align:center;color:#64748b;font-weight:800}
 </style>
 
+
+<style id="ppc-signup-link-fix">
+#ppc-signup-link-row{display:block !important;}
+#ppc-signup-link-row button{display:inline-block !important;}
+button[onclick="toggleAuthMode('signup')"]{
+  display:inline-block !important;
+  visibility:visible !important;
+  opacity:1 !important;
+}
+</style>
+
 </head>
 <body class="max-w-md mx-auto min-h-screen shadow-2xl relative bg-slate-50 overflow-x-hidden">
 
@@ -327,7 +338,14 @@
                 </div>
                 <button onclick="handleLogin()" class="ppc-login-main-btn">로그인</button>
                 <div class="ppc-divider">또는</div>
-                <button onclick="openAdminLogin()" class="ppc-admin-btn">
+                
+<div id="ppc-signup-link-row" class="text-center mt-3 mb-2">
+  <button onclick="toggleAuthMode('signup')" class="text-xs font-black text-blue-700 hover:text-blue-900 underline underline-offset-4">
+    신규 회원가입
+  </button>
+</div>
+
+<button onclick="openAdminLogin()" class="ppc-admin-btn">
                     <svg viewBox="0 0 24 24"><path d="M12 2 4 5.5v6.2c0 5 3.41 9.67 8 10.8 4.59-1.13 8-5.8 8-10.8V5.5L12 2Zm1 14h-2v-2h2v2Zm0-4h-2V7h2v5Z"/></svg>
                     관리자 로그인
                 </button>
