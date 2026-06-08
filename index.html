@@ -258,6 +258,24 @@
 }
 </style>
 
+
+<style id="ppc-admin-best-style">
+.admin-student-card-clickable{ cursor:pointer; transition:transform .15s ease; }
+.admin-student-card-clickable:active{ transform:scale(.99); }
+.admin-best-item{ background:#fff; border:1px solid #dbeafe; border-radius:1.25rem; padding:1rem; box-shadow:0 6px 18px rgba(15,23,42,.05); }
+.admin-best-item .best-title{font-weight:900;color:#0f172a;font-size:.95rem;}
+.admin-best-item .best-value{font-weight:900;color:#1d4ed8;font-size:1.15rem;}
+.admin-best-empty{ background:#fff; border:1px dashed #cbd5e1; border-radius:1.5rem; padding:2rem 1rem; text-align:center; color:#64748b; font-weight:800; }
+</style>
+
+
+<style id="ppc-admin-best-v2-style">
+.admin-best-item{background:#fff;border:1px solid #dbeafe;border-radius:1.25rem;padding:1rem;box-shadow:0 6px 18px rgba(15,23,42,.05)}
+.admin-best-item .best-title{font-weight:900;color:#0f172a;font-size:.95rem}
+.admin-best-item .best-value{font-weight:900;color:#1d4ed8;font-size:1.15rem}
+.admin-best-empty{background:#fff;border:1px dashed #cbd5e1;border-radius:1.5rem;padding:2rem 1rem;text-align:center;color:#64748b;font-weight:800}
+</style>
+
 </head>
 <body class="max-w-md mx-auto min-h-screen shadow-2xl relative bg-slate-50 overflow-x-hidden">
 
@@ -632,6 +650,20 @@
         </section>
 
 <!-- 관리자 회원관리 -->
+
+<section id="admin-student-best-view" class="view-section hidden-view flex-1 p-6 space-y-4">
+  <div class="bg-gradient-to-br from-blue-900 to-blue-700 text-white rounded-[2rem] p-5 shadow-xl">
+    <button onclick="closeAdminStudentBestPage()" class="mb-4 inline-flex items-center gap-2 rounded-full bg-white/15 border border-white/25 px-4 py-2 text-xs font-black text-white">
+      ← 회원관리로 돌아가기
+    </button>
+    <p class="text-[10px] font-black text-blue-100 uppercase tracking-widest mb-1">Student Best Records</p>
+    <h2 id="admin-best-page-name" class="text-2xl font-black">학생 BEST 기록</h2>
+    <p id="admin-best-page-info" class="text-xs font-bold text-blue-100 mt-1">-</p>
+  </div>
+  <div id="admin-best-page-list" class="space-y-3"></div>
+</section>
+
+
 <section id="admin-view" class="view-section hidden-view flex-1 p-6 space-y-4">
     
     <div class="flex justify-between items-center">
@@ -2326,6 +2358,11 @@ async function renderAdminPage() {
                     </div>
 
                 </div>
+
+                <button onclick="openAdminBestByDocId('${user.docId}')"
+                    class="w-full mt-3 bg-blue-700 hover:bg-blue-800 text-white py-3 rounded-2xl text-xs font-black shadow active:scale-[0.98]">
+                    BEST 기록 보기
+                </button>
             </div>
 
         `).join('');
@@ -2489,5 +2526,796 @@ function renderMeasureHomeLists(){
     };
 })();
 </script>
+
+<!-- 관리자 학생 BEST 기록 모달 -->
+<div id="admin-student-best-modal" class="hidden fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-[1200] p-4 flex items-center justify-center">
+  <div class="bg-white w-full max-w-md rounded-[2rem] shadow-2xl overflow-hidden max-h-[88vh] flex flex-col">
+    <div class="bg-gradient-to-br from-blue-900 to-blue-700 text-white p-5">
+      <div class="flex items-start justify-between gap-3">
+        <div class="min-w-0">
+          <p class="text-[10px] font-black text-blue-100 uppercase tracking-widest mb-1">Student Best Records</p>
+          <h3 id="admin-best-student-name" class="text-2xl font-black truncate">학생 BEST 기록</h3>
+          <p id="admin-best-student-info" class="text-xs font-bold text-blue-100 mt-1 truncate">-</p>
+        </div>
+        <button onclick="closeAdminStudentBestModal()" class="shrink-0 w-9 h-9 rounded-full bg-white/15 border border-white/25 text-white font-black">×</button>
+      </div>
+    </div>
+    <div class="p-4 bg-slate-50 overflow-y-auto no-scrollbar flex-1">
+      <div id="admin-best-record-list" class="space-y-3"></div>
+    </div>
+  </div>
+</div>
+
+
+<script id="ppc-admin-best-script">
+(function(){
+  function getAllUsersForAdminBest(){
+    try{
+      if (typeof users !== 'undefined' && Array.isArray(users)) return users;
+      if (typeof students !== 'undefined' && Array.isArray(students)) return students;
+      var keys = ['ppcUsers','users','PPC_USERS','students','ppc_students'];
+      for(var i=0;i<keys.length;i++){
+        var raw = localStorage.getItem(keys[i]);
+        if(raw){
+          var parsed = JSON.parse(raw);
+          if(Array.isArray(parsed)) return parsed;
+          if(parsed && typeof parsed === 'object') return Object.values(parsed);
+        }
+      }
+    }catch(e){}
+    return [];
+  }
+  function getAllRecordsForAdminBest(){
+    try{
+      if (typeof records !== 'undefined' && Array.isArray(records)) return records;
+      if (typeof allRecords !== 'undefined' && Array.isArray(allRecords)) return allRecords;
+      var keys = ['ppcRecords','records','PPC_RECORDS','recordData','ppc_records'];
+      for(var i=0;i<keys.length;i++){
+        var raw = localStorage.getItem(keys[i]);
+        if(raw){
+          var parsed = JSON.parse(raw);
+          if(Array.isArray(parsed)) return parsed;
+          if(parsed && typeof parsed === 'object') return Object.values(parsed).flat();
+        }
+      }
+    }catch(e){}
+    return [];
+  }
+  function normalizeUserId(u){
+    return String((u && (u.id || u.userId || u.uid || u.loginId || u.studentId || u.regId)) || '').trim();
+  }
+  function normalizeRecordUserId(r){
+    return String((r && (r.userId || r.id || r.uid || r.studentId || r.loginId)) || '').trim();
+  }
+  function getRecordMap(r){
+    if(r && r.values && typeof r.values === 'object') return r.values;
+    if(r && r.records && typeof r.records === 'object' && !Array.isArray(r.records)) return r.records;
+    if(r && r.data && typeof r.data === 'object') return r.data;
+    return r || {};
+  }
+  function unitForEvent(name){
+    try{ if(typeof MASTER_DATA !== 'undefined' && MASTER_DATA[name] && MASTER_DATA[name].unit) return MASTER_DATA[name].unit; }catch(e){}
+    if(String(name).includes('왕복') || String(name).includes('런') || String(name).includes('달리기')) return 'sec';
+    if(String(name).includes('배근력')) return 'kg';
+    if(String(name).includes('메디신')) return 'm';
+    if(String(name).includes('멀리')) return 'cm';
+    return '';
+  }
+  function isLowerBetter(name){
+    try{ if(typeof MASTER_DATA !== 'undefined' && MASTER_DATA[name]) return !!MASTER_DATA[name].isLowerBetter; }catch(e){}
+    return String(name).includes('왕복') || String(name).includes('런') || String(name).includes('달리기');
+  }
+  window.openAdminStudentBestModal = function(userKey){
+    var usersArr = getAllUsersForAdminBest();
+    var user = usersArr.find(function(u){return normalizeUserId(u) === String(userKey);}) || usersArr.find(function(u){return String((u && u.name) || '') === String(userKey);}) || {};
+    var userId = normalizeUserId(user) || String(userKey);
+    var userName = user.name || user.displayName || userId || '학생';
+    var modal = document.getElementById('admin-student-best-modal');
+    var nameEl = document.getElementById('admin-best-student-name');
+    var infoEl = document.getElementById('admin-best-student-info');
+    var listEl = document.getElementById('admin-best-record-list');
+    if(!modal || !listEl) return;
+    nameEl.textContent = userName + ' BEST 기록';
+    infoEl.textContent = (user.school || '-') + ' · ' + (user.grade ? user.grade + '학년' : '-') + ' · ' + (user.type || user.admissionType || '-');
+    var all = getAllRecordsForAdminBest();
+    var mine = all.filter(function(r){
+      var rid = normalizeRecordUserId(r);
+      return rid === userId || String(r.name || r.userName || '') === String(userName);
+    });
+    var best = {};
+    mine.forEach(function(r){
+      var date = r.date || r.createdAt || r.savedAt || '';
+      var map = getRecordMap(r);
+      Object.entries(map).forEach(function(pair){
+        var eventName = pair[0], val = pair[1];
+        if(['userId','id','uid','studentId','loginId','name','userName','date','createdAt','savedAt','values','records','data'].includes(eventName)) return;
+        var v = val;
+        if(v && typeof v === 'object') v = v.value ?? v.record ?? v.score ?? v.first ?? v.v;
+        var num = parseFloat(String(v).replace(/[^\d.-]/g,''));
+        if(!Number.isFinite(num)) return;
+        var lower = isLowerBetter(eventName);
+        if(!best[eventName] || (lower ? num < best[eventName].value : num > best[eventName].value)){
+          best[eventName] = {value:num, date:date};
+        }
+      });
+    });
+    var entries = Object.entries(best).sort(function(a,b){return a[0].localeCompare(b[0],'ko');});
+    if(entries.length === 0){
+      listEl.innerHTML = '<div class="admin-best-empty">아직 저장된 기록이 없습니다.</div>';
+    }else{
+      listEl.innerHTML = entries.map(function(pair){
+        var eventName = pair[0], b = pair[1];
+        return '<div class="admin-best-item"><div class="flex items-center justify-between gap-3"><div class="min-w-0"><div class="best-title truncate">'+eventName+'</div><div class="text-[11px] font-bold text-slate-400 mt-1">'+(b.date || '날짜 없음')+'</div></div><div class="text-right shrink-0"><div class="best-value">'+b.value+'<span class="text-xs ml-1 text-slate-500">'+unitForEvent(eventName)+'</span></div><div class="text-[10px] font-black text-blue-600 mt-1">BEST</div></div></div></div>';
+      }).join('');
+    }
+    modal.classList.remove('hidden');
+  };
+  window.closeAdminStudentBestModal = function(){
+    var modal = document.getElementById('admin-student-best-modal');
+    if(modal) modal.classList.add('hidden');
+  };
+  function attachAdminStudentCardClicks(){
+    var list = document.getElementById('admin-user-list');
+    if(!list) return;
+    var usersArr = getAllUsersForAdminBest();
+    var cards = Array.from(list.children).filter(function(el){return el.nodeType === 1;});
+    cards.forEach(function(card, idx){
+      if(card.dataset.bestClickAttached === '1') return;
+      var text = card.innerText || '';
+      var matched = usersArr.find(function(u){
+        return text.includes(u.name || '') && (text.includes(normalizeUserId(u)) || text.includes(u.school || '') || text.includes(u.phone || ''));
+      });
+      var key = normalizeUserId(matched) || (matched && matched.name) || normalizeUserId(usersArr[idx]) || (usersArr[idx] && usersArr[idx].name);
+      if(!key) return;
+      card.classList.add('admin-student-card-clickable');
+      card.dataset.bestClickAttached = '1';
+      card.addEventListener('click', function(e){
+        if(e.target.closest('button, a, input, select, textarea')) return;
+        openAdminStudentBestModal(key);
+      });
+    });
+  }
+  var observer = new MutationObserver(attachAdminStudentCardClicks);
+  document.addEventListener('DOMContentLoaded', function(){
+    var list = document.getElementById('admin-user-list');
+    if(list) observer.observe(list, {childList:true, subtree:true});
+    setTimeout(attachAdminStudentCardClicks, 500);
+  });
+  window.addEventListener('click', function(){ setTimeout(attachAdminStudentCardClicks, 200); });
+})();
+</script>
+
+
+<script id="ppc-admin-best-v2-script">
+(function(){
+  function arrFromMaybe(v){
+    if(!v) return [];
+    if(Array.isArray(v)) return v;
+    if(typeof v === 'object') return Object.values(v);
+    return [];
+  }
+
+  function getUsers(){
+    try{
+      if(window.users && Array.isArray(window.users)) return window.users;
+      if(window.members && Array.isArray(window.members)) return window.members;
+      if(window.students && Array.isArray(window.students)) return window.students;
+      var keys=['ppcUsers','users','PPC_USERS','students','members'];
+      for(var i=0;i<keys.length;i++){
+        var raw=localStorage.getItem(keys[i]);
+        if(raw) return arrFromMaybe(JSON.parse(raw));
+      }
+    }catch(e){}
+    return [];
+  }
+
+  function getRecords(){
+    try{
+      if(window.records && Array.isArray(window.records)) return window.records;
+      if(window.allRecords && Array.isArray(window.allRecords)) return window.allRecords;
+      var keys=['ppcRecords','records','PPC_RECORDS','recordData','ppc_records'];
+      for(var i=0;i<keys.length;i++){
+        var raw=localStorage.getItem(keys[i]);
+        if(raw){
+          var p=JSON.parse(raw);
+          if(Array.isArray(p)) return p;
+          if(p && typeof p==='object') return Object.values(p).flat();
+        }
+      }
+    }catch(e){}
+    return [];
+  }
+
+  function uid(u){return String((u&&(u.id||u.userId||u.uid||u.loginId||u.studentId||u.regId||u.username))||'').trim();}
+  function rid(r){return String((r&&(r.userId||r.id||r.uid||r.studentId||r.loginId||r.username))||'').trim();}
+
+  function unit(name){
+    try{if(window.MASTER_DATA && MASTER_DATA[name] && MASTER_DATA[name].unit) return MASTER_DATA[name].unit;}catch(e){}
+    if(name.includes('왕복')||name.includes('런')||name.includes('달리기')) return 'sec';
+    if(name.includes('배근력')) return 'kg';
+    if(name.includes('메디신')) return 'm';
+    if(name.includes('멀리')) return 'cm';
+    if(name.includes('스텝')||name.includes('농구')||name.includes('싯업')) return '회';
+    return '';
+  }
+  function lower(name){
+    try{if(window.MASTER_DATA && MASTER_DATA[name]) return !!MASTER_DATA[name].isLowerBetter;}catch(e){}
+    return name.includes('왕복')||name.includes('런')||name.includes('달리기');
+  }
+
+  function recordPairs(r){
+    var out=[];
+    function addObj(obj){
+      if(!obj || typeof obj!=='object') return;
+      Object.keys(obj).forEach(function(k){
+        if(['userId','id','uid','studentId','loginId','username','name','userName','date','createdAt','savedAt','values','records','data','timestamp'].includes(k)) return;
+        var v=obj[k];
+        if(v && typeof v==='object') v = v.value ?? v.record ?? v.score ?? v.first ?? v.v ?? v['1차 기록'];
+        var n=parseFloat(String(v).replace(/[^\d.-]/g,''));
+        if(Number.isFinite(n)) out.push([k,n]);
+      });
+    }
+    addObj(r.values); addObj(r.records); addObj(r.data); addObj(r);
+    return out;
+  }
+
+  window.openAdminStudentBestPage = function(key){
+    var users=getUsers();
+    var user=users.find(function(u){return uid(u)===String(key) || String(u.name||'')===String(key);}) || {};
+    var userId=uid(user) || String(key);
+    var userName=user.name || user.displayName || userId || '학생';
+
+    var all=getRecords();
+    var mine=all.filter(function(r){
+      return rid(r)===userId || String(r.name||r.userName||'')===String(userName);
+    });
+
+    var best={};
+    mine.forEach(function(r){
+      var date=r.date||r.createdAt||r.savedAt||'';
+      recordPairs(r).forEach(function(p){
+        var ev=p[0], n=p[1], isLow=lower(ev);
+        if(!best[ev] || (isLow ? n<best[ev].value : n>best[ev].value)) best[ev]={value:n,date:date};
+      });
+    });
+
+    var nameEl=document.getElementById('admin-best-page-name');
+    var infoEl=document.getElementById('admin-best-page-info');
+    var list=document.getElementById('admin-best-page-list');
+    if(nameEl) nameEl.textContent=userName+' BEST 기록';
+    if(infoEl) infoEl.textContent=(user.school||'-')+' · '+(user.grade?user.grade+'학년':'-')+' · '+(user.type||user.admissionType||'-');
+
+    var entries=Object.entries(best).sort(function(a,b){return a[0].localeCompare(b[0],'ko');});
+    if(list){
+      if(!entries.length){
+        list.innerHTML='<div class="admin-best-empty">아직 저장된 기록이 없습니다.<br><span class="text-xs text-slate-400">학생이 기록을 저장하면 여기에 BEST 기록이 표시됩니다.</span></div>';
+      }else{
+        list.innerHTML=entries.map(function(e){
+          return '<div class="admin-best-item"><div class="flex items-center justify-between gap-3"><div class="min-w-0"><div class="best-title truncate">'+e[0]+'</div><div class="text-[11px] font-bold text-slate-400 mt-1">'+(e[1].date||'날짜 없음')+'</div></div><div class="text-right shrink-0"><div class="best-value">'+e[1].value+'<span class="text-xs ml-1 text-slate-500">'+unit(e[0])+'</span></div><div class="text-[10px] font-black text-blue-600 mt-1">BEST</div></div></div></div>';
+        }).join('');
+      }
+    }
+
+    document.querySelectorAll('.view-section').forEach(function(s){s.classList.add('hidden-view');});
+    var v=document.getElementById('admin-student-best-view');
+    if(v) v.classList.remove('hidden-view');
+    var nav=document.querySelector('nav'); if(nav) nav.style.display='none';
+  };
+
+  window.closeAdminStudentBestPage = function(){
+    var v=document.getElementById('admin-student-best-view');
+    if(v) v.classList.add('hidden-view');
+    var admin=document.getElementById('admin-view');
+    if(admin) admin.classList.remove('hidden-view');
+  };
+
+  function enhanceCards(){
+    var list=document.getElementById('admin-user-list');
+    if(!list || list.classList.contains('hidden')) return;
+    var users=getUsers();
+    var cards=Array.from(list.children).filter(function(el){return el.nodeType===1;});
+    cards.forEach(function(card,idx){
+      if(card.dataset.bestBtnAdded==='1') return;
+      var text=card.innerText||'';
+      var u=users.find(function(x){return (x.name && text.includes(x.name)) || (uid(x) && text.includes(uid(x)));}) || users[idx];
+      var key=uid(u) || (u&&u.name);
+      if(!key) return;
+      var btn=document.createElement('button');
+      btn.type='button';
+      btn.className='mt-3 w-full bg-blue-700 text-white py-3 rounded-2xl text-xs font-black shadow active:scale-[0.98]';
+      btn.textContent='BEST 기록 보기';
+      btn.onclick=function(e){e.stopPropagation(); openAdminStudentBestPage(key);};
+      card.appendChild(btn);
+      card.dataset.bestBtnAdded='1';
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded',function(){
+    // setInterval(enhanceCards, 800); // 중복 버튼 방지를 위해 비활성화
+  });
+})();
+</script>
+
+
+<script id="ppc-admin-best-v3-script">
+(function(){
+  function arrFromMaybe(v){
+    if(!v) return [];
+    if(Array.isArray(v)) return v;
+    if(typeof v === 'object') return Object.values(v);
+    return [];
+  }
+  function getUsers(){
+    try{
+      if(window.users && Array.isArray(window.users)) return window.users;
+      if(window.members && Array.isArray(window.members)) return window.members;
+      if(window.students && Array.isArray(window.students)) return window.students;
+      var keys=['ppcUsers','users','PPC_USERS','students','members'];
+      for(var i=0;i<keys.length;i++){
+        var raw=localStorage.getItem(keys[i]);
+        if(raw) return arrFromMaybe(JSON.parse(raw));
+      }
+    }catch(e){}
+    return [];
+  }
+  function uid(u){
+    return String((u&&(u.id||u.userId||u.uid||u.loginId||u.studentId||u.regId||u.username))||'').trim();
+  }
+  function rid(r){
+    return String((r&&(r.userId||r.id||r.uid||r.studentId||r.loginId||r.username||r.ownerId))||'').trim();
+  }
+  function unit(name){
+    try{if(window.MASTER_DATA && MASTER_DATA[name] && MASTER_DATA[name].unit) return MASTER_DATA[name].unit;}catch(e){}
+    if(name.includes('왕복')||name.includes('런')||name.includes('달리기')) return 'sec';
+    if(name.includes('배근력')) return 'kg';
+    if(name.includes('메디신')) return 'm';
+    if(name.includes('멀리')) return 'cm';
+    if(name.includes('스텝')||name.includes('농구')||name.includes('싯업')||name.includes('배구')) return '회';
+    return '';
+  }
+  function lower(name){
+    try{if(window.MASTER_DATA && MASTER_DATA[name]) return !!MASTER_DATA[name].isLowerBetter;}catch(e){}
+    return name.includes('왕복')||name.includes('런')||name.includes('달리기')||name.toLowerCase().includes('sec');
+  }
+  function addPairsFromObj(obj, out){
+    if(!obj || typeof obj !== 'object') return;
+    Object.keys(obj).forEach(function(k){
+      if(['userId','id','uid','studentId','loginId','username','ownerId','name','userName','date','createdAt','savedAt','values','records','data','timestamp','updatedAt','type','school','grade','gender','phone','college'].includes(k)) return;
+      var v=obj[k];
+      if(v && typeof v==='object') v = v.value ?? v.record ?? v.score ?? v.first ?? v.second ?? v.best ?? v.v ?? v['1차 기록'] ?? v['1차기록'];
+      var n=parseFloat(String(v).replace(/[^\d.-]/g,''));
+      if(Number.isFinite(n)) out.push([k,n]);
+    });
+  }
+  function recordPairs(r){
+    var out=[];
+    addPairsFromObj(r && r.values, out);
+    addPairsFromObj(r && r.records, out);
+    addPairsFromObj(r && r.data, out);
+    addPairsFromObj(r && r.recordData, out);
+    addPairsFromObj(r, out);
+    return out;
+  }
+  function flattenRecordsFromLocalStorageForUser(user){
+    var userId=uid(user), userName=user.name||user.displayName||'';
+    var all=[];
+    try{
+      // 학생 객체 안 records도 포함
+      ['records','recordData','history'].forEach(function(k){
+        if(user && user[k]) all = all.concat(arrFromMaybe(user[k]).map(function(x){ if(typeof x==='object'){x.userId=x.userId||userId; x.name=x.name||userName;} return x; }));
+      });
+      var keys=['ppcRecords','records','PPC_RECORDS','recordData','ppc_records','userRecords','studentRecords'];
+      keys.forEach(function(key){
+        var raw=localStorage.getItem(key);
+        if(!raw) return;
+        var p=JSON.parse(raw);
+        if(Array.isArray(p)) all=all.concat(p);
+        else if(p && typeof p==='object'){
+          // {userId:[...]} 또는 {userId:{date:{...}}}
+          Object.keys(p).forEach(function(k){
+            var v=p[k];
+            if(k===userId || k===userName){
+              arrFromMaybe(v).forEach(function(x){
+                if(typeof x==='object'){ x.userId=x.userId||userId; x.name=x.name||userName; }
+                all.push(x);
+              });
+            }else{
+              arrFromMaybe(v).forEach(function(x){
+                if(typeof x==='object') all.push(x);
+              });
+            }
+          });
+        }
+      });
+    }catch(e){}
+    return all;
+  }
+  function buildBest(user, records){
+    var userId=uid(user), userName=user.name||user.displayName||'';
+    var best={};
+    records.filter(function(r){
+      return rid(r)===userId || String(r.name||r.userName||'')===String(userName) || !rid(r);
+    }).forEach(function(r){
+      var date=r.date||r.createdAt||r.savedAt||'';
+      recordPairs(r).forEach(function(p){
+        var ev=p[0], n=p[1], isLow=lower(ev);
+        if(!best[ev] || (isLow ? n<best[ev].value : n>best[ev].value)) best[ev]={value:n,date:date};
+      });
+    });
+    return best;
+  }
+  async function fetchFirestoreRecords(user){
+    var userId=uid(user), userName=user.name||user.displayName||'';
+    var results=[];
+    try{
+      var db = window.db || (window.firebase && firebase.firestore ? firebase.firestore() : null);
+      if(!db) return results;
+      var collections=['records','Record','ppcRecords','studentRecords'];
+      for(var c=0;c<collections.length;c++){
+        try{
+          var snap = await db.collection(collections[c]).get();
+          snap.forEach(function(doc){
+            var d=doc.data()||{};
+            d.__docId=doc.id;
+            // 문서ID가 userId/date 형식이어도 잡기
+            if(rid(d)===userId || String(d.name||d.userName||'')===String(userName) || String(doc.id).includes(userId)){
+              d.userId=d.userId||userId;
+              results.push(d);
+            }
+          });
+          if(results.length) break;
+        }catch(e){}
+      }
+      // users 컬렉션의 학생문서 안 records도 확인
+      try{
+        if(userId){
+          var udoc = await db.collection('users').doc(userId).get();
+          if(udoc.exists){
+            var ud=udoc.data()||{};
+            ['records','recordData','history'].forEach(function(k){
+              arrFromMaybe(ud[k]).forEach(function(x){
+                if(typeof x==='object'){x.userId=x.userId||userId; x.name=x.name||userName; results.push(x);}
+              });
+            });
+          }
+        }
+      }catch(e){}
+    }catch(e){}
+    return results;
+  }
+  function renderBest(user, best, loadingMsg){
+    var nameEl=document.getElementById('admin-best-student-name') || document.getElementById('admin-best-page-name');
+    var infoEl=document.getElementById('admin-best-student-info') || document.getElementById('admin-best-page-info');
+    var list=document.getElementById('admin-best-record-list') || document.getElementById('admin-best-page-list');
+    var userName=user.name||user.displayName||uid(user)||'학생';
+    if(nameEl) nameEl.textContent=userName+' BEST 기록';
+    if(infoEl) infoEl.textContent=(user.school||'-')+' · '+(user.grade?user.grade+'학년':'-')+' · '+(user.type||user.admissionType||'-');
+    if(!list) return;
+    if(loadingMsg){ list.innerHTML='<div class="admin-best-empty">'+loadingMsg+'</div>'; return; }
+    var entries=Object.entries(best).sort(function(a,b){return a[0].localeCompare(b[0],'ko');});
+    if(!entries.length){
+      list.innerHTML='<div class="admin-best-empty">저장된 기록을 찾지 못했어.<br><span class="text-xs text-slate-400">기록 저장 위치를 한 번 더 맞춰볼게.</span></div>';
+    }else{
+      list.innerHTML=entries.map(function(e){
+        return '<div class="admin-best-item"><div class="flex items-center justify-between gap-3"><div class="min-w-0"><div class="best-title truncate">'+e[0]+'</div><div class="text-[11px] font-bold text-slate-400 mt-1">'+(e[1].date||'날짜 없음')+'</div></div><div class="text-right shrink-0"><div class="best-value">'+e[1].value+'<span class="text-xs ml-1 text-slate-500">'+unit(e[0])+'</span></div><div class="text-[10px] font-black text-blue-600 mt-1">BEST</div></div></div></div>';
+      }).join('');
+    }
+  }
+  async function openBest(key){
+    var users=getUsers();
+    var user=users.find(function(u){return uid(u)===String(key)||String(u.name||'')===String(key);}) || {id:String(key), name:String(key)};
+    var modal=document.getElementById('admin-student-best-modal');
+    if(modal) modal.classList.remove('hidden');
+    renderBest(user, {}, '기록을 불러오는 중...');
+    var localRecords=flattenRecordsFromLocalStorageForUser(user);
+    var fsRecords=await fetchFirestoreRecords(user);
+    var best=buildBest(user, localRecords.concat(fsRecords));
+    renderBest(user,best);
+  }
+  window.openAdminStudentBestModal=openBest;
+  window.openAdminStudentBestPage=openBest;
+})();
+</script>
+
+
+<script id="ppc-admin-best-docid-final-script">
+async function openAdminBestByDocId(docId){
+    const modal = document.getElementById('admin-student-best-modal');
+    const nameEl = document.getElementById('admin-best-student-name');
+    const infoEl = document.getElementById('admin-best-student-info');
+    const listEl = document.getElementById('admin-best-record-list');
+
+    if(modal) modal.classList.remove('hidden');
+    if(nameEl) nameEl.textContent = 'BEST 기록';
+    if(infoEl) infoEl.textContent = '기록을 불러오는 중...';
+    if(listEl) listEl.innerHTML = '<div class="admin-best-empty">기록을 불러오는 중입니다...</div>';
+
+    try{
+        const snap = await db.collection('users').doc(docId).get();
+        if(!snap.exists) throw new Error('user-not-found');
+
+        const user = { docId: snap.id, ...snap.data() };
+        const records = Array.isArray(user.records) ? user.records : [];
+
+        if(nameEl) nameEl.textContent = `${user.name || user.id || '학생'} BEST 기록`;
+        if(infoEl) infoEl.textContent = `${user.school || '-'} · ${user.grade ? user.grade + '학년' : '-'} · ${user.type || '-'}`;
+
+        const best = {};
+        records.forEach(r => {
+            const date = r.date || r.createdAt || r.savedAt || '';
+            const values = r.values || r.data || r.recordData || {};
+            Object.entries(values).forEach(([eventName, rawValue]) => {
+                const value = parseFloat(String(rawValue).replace(/[^\d.-]/g,''));
+                if(!Number.isFinite(value)) return;
+
+                let isLower = false;
+                try{
+                    isLower = !!(MASTER_DATA[eventName] && MASTER_DATA[eventName].isLowerBetter);
+                }catch(e){
+                    isLower = eventName.includes('왕복') || eventName.includes('런') || eventName.includes('달리기');
+                }
+
+                if(!best[eventName] || (isLower ? value < best[eventName].value : value > best[eventName].value)){
+                    best[eventName] = { value, date };
+                }
+            });
+        });
+
+        const entries = Object.entries(best).sort((a,b)=>a[0].localeCompare(b[0],'ko'));
+
+        if(!listEl) return;
+
+        if(entries.length === 0){
+            listEl.innerHTML = `
+                <div class="admin-best-empty">
+                    아직 저장된 기록이 없습니다.<br>
+                    <span class="text-xs text-slate-400">학생이 측정화면에서 기록 저장을 하면 여기에 표시됩니다.</span>
+                </div>
+            `;
+            return;
+        }
+
+        listEl.innerHTML = entries.map(([eventName, b]) => {
+            let unit = '';
+            try{ unit = MASTER_DATA[eventName]?.unit || ''; }catch(e){}
+            return `
+                <div class="admin-best-item">
+                    <div class="flex items-center justify-between gap-3">
+                        <div class="min-w-0">
+                            <div class="best-title truncate">${eventName}</div>
+                            <div class="text-[11px] font-bold text-slate-400 mt-1">${b.date || '날짜 없음'}</div>
+                        </div>
+                        <div class="text-right shrink-0">
+                            <div class="best-value">${b.value}<span class="text-xs ml-1 text-slate-500">${unit}</span></div>
+                            <div class="text-[10px] font-black text-blue-600 mt-1">BEST</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+    }catch(error){
+        console.error(error);
+        if(infoEl) infoEl.textContent = '- · - · -';
+        if(listEl) listEl.innerHTML = `
+            <div class="admin-best-empty">
+                기록을 불러오지 못했습니다.<br>
+                <span class="text-xs text-slate-400">Firebase 연결 또는 회원 기록 데이터를 확인해주세요.</span>
+            </div>
+        `;
+    }
+}
+</script>
+
+
+<script id="ppc-admin-best-absolute-final">
+(function(){
+  function getDb(){
+    try{ if(typeof db !== 'undefined') return db; }catch(e){}
+    try{ if(window.firebase && firebase.firestore) return firebase.firestore(); }catch(e){}
+    return null;
+  }
+
+  function getUsersSafe(){
+    try{ if(typeof users !== 'undefined' && Array.isArray(users)) return users; }catch(e){}
+    try{ if(window.users && Array.isArray(window.users)) return window.users; }catch(e){}
+    return [];
+  }
+
+  function getUserKey(u){
+    return String((u && (u.docId || u.id || u.userId || u.uid || u.loginId || u.studentId || u.username)) || '').trim();
+  }
+
+  function findUserFromKey(key){
+    const arr = getUsersSafe();
+    const s = String(key || '');
+    return arr.find(u =>
+      String(u.docId || '') === s ||
+      String(u.id || '') === s ||
+      String(u.name || '') === s ||
+      String(u.phone || '') === s
+    ) || null;
+  }
+
+  function unitOf(eventName){
+    try{ if(typeof MASTER_DATA !== 'undefined' && MASTER_DATA[eventName]) return MASTER_DATA[eventName].unit || ''; }catch(e){}
+    if(eventName.includes('왕복') || eventName.includes('런') || eventName.includes('달리기')) return 'sec';
+    if(eventName.includes('배근력')) return 'kg';
+    if(eventName.includes('메디신')) return 'm';
+    if(eventName.includes('멀리')) return 'cm';
+    if(eventName.includes('농구') || eventName.includes('배구') || eventName.includes('스텝') || eventName.includes('싯업')) return '회';
+    return '';
+  }
+
+  function isLowerBetter(eventName){
+    try{ if(typeof MASTER_DATA !== 'undefined' && MASTER_DATA[eventName]) return !!MASTER_DATA[eventName].isLowerBetter; }catch(e){}
+    return eventName.includes('왕복') || eventName.includes('런') || eventName.includes('달리기');
+  }
+
+  function addBest(best, eventName, rawValue, date){
+    const value = parseFloat(String(rawValue).replace(/[^\d.-]/g,''));
+    if(!Number.isFinite(value)) return;
+    const lower = isLowerBetter(eventName);
+    if(!best[eventName] || (lower ? value < best[eventName].value : value > best[eventName].value)){
+      best[eventName] = { value, date: date || '' };
+    }
+  }
+
+  function scanRecordObject(best, obj, date){
+    if(!obj || typeof obj !== 'object') return;
+
+    // 일반 구조: {date, values:{종목:기록}}
+    if(obj.values && typeof obj.values === 'object'){
+      Object.entries(obj.values).forEach(([k,v]) => addBest(best, k, v, obj.date || date));
+    }
+
+    // 혹시 다른 이름으로 저장된 경우
+    ['data','recordData','measurements'].forEach(key => {
+      if(obj[key] && typeof obj[key] === 'object'){
+        Object.entries(obj[key]).forEach(([k,v]) => addBest(best, k, v, obj.date || date));
+      }
+    });
+
+    // 평평한 구조: {제자리멀리뛰기:250, 배근력:120}
+    Object.entries(obj).forEach(([k,v]) => {
+      if(['docId','id','userId','uid','loginId','studentId','username','name','userName','school','grade','type','gender','phone','college','pw','records','extraEvents','date','createdAt','updatedAt','savedAt','values','data','recordData','measurements'].includes(k)) return;
+      addBest(best, k, v, obj.date || date);
+    });
+  }
+
+  function buildBestFromUser(user){
+    const best = {};
+    const recordSets = [];
+
+    if(Array.isArray(user.records)) recordSets.push(...user.records);
+    if(Array.isArray(user.recordData)) recordSets.push(...user.recordData);
+    if(Array.isArray(user.history)) recordSets.push(...user.history);
+
+    recordSets.forEach(r => scanRecordObject(best, r, r && r.date));
+
+    return best;
+  }
+
+  function renderAdminBest(user, best, msg){
+    const modal = document.getElementById('admin-student-best-modal');
+    const nameEl = document.getElementById('admin-best-student-name');
+    const infoEl = document.getElementById('admin-best-student-info');
+    const listEl = document.getElementById('admin-best-record-list');
+
+    if(modal) modal.classList.remove('hidden');
+    if(nameEl) nameEl.textContent = `${user.name || user.id || '학생'} BEST 기록`;
+    if(infoEl) infoEl.textContent = `${user.school || '-'} · ${user.grade ? user.grade + '학년' : '-'} · ${user.type || '-'}`;
+
+    if(!listEl) return;
+    if(msg){
+      listEl.innerHTML = `<div class="admin-best-empty">${msg}</div>`;
+      return;
+    }
+
+    const entries = Object.entries(best).sort((a,b)=>a[0].localeCompare(b[0],'ko'));
+    if(entries.length === 0){
+      listEl.innerHTML = `
+        <div class="admin-best-empty">
+          아직 저장된 기록이 없습니다.<br>
+          <span class="text-xs text-slate-400">학생이 측정화면에서 기록 저장을 하면 여기에 표시됩니다.</span>
+        </div>`;
+      return;
+    }
+
+    listEl.innerHTML = entries.map(([eventName, b]) => `
+      <div class="admin-best-item">
+        <div class="flex items-center justify-between gap-3">
+          <div class="min-w-0">
+            <div class="best-title truncate">${eventName}</div>
+            <div class="text-[11px] font-bold text-slate-400 mt-1">${b.date || '날짜 없음'}</div>
+          </div>
+          <div class="text-right shrink-0">
+            <div class="best-value">${b.value}<span class="text-xs ml-1 text-slate-500">${unitOf(eventName)}</span></div>
+            <div class="text-[10px] font-black text-blue-600 mt-1">BEST</div>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  async function openBestFinal(key){
+    const dbx = getDb();
+    let user = findUserFromKey(key) || { docId: String(key), id: String(key), name: String(key) };
+
+    renderAdminBest(user, {}, '기록을 불러오는 중입니다...');
+
+    try{
+      // 최신 회원정보 먼저 다시 불러오기
+      if(dbx){
+        const possibleDocIds = [...new Set([
+          user.docId,
+          user.id ? encodeURIComponent(user.id) : '',
+          String(key || '')
+        ].filter(Boolean))];
+
+        for(const docId of possibleDocIds){
+          try{
+            const snap = await dbx.collection('users').doc(docId).get();
+            if(snap.exists){
+              user = { docId: snap.id, ...snap.data() };
+              break;
+            }
+          }catch(e){}
+        }
+      }
+
+      const best = buildBestFromUser(user);
+      renderAdminBest(user, best);
+    }catch(e){
+      console.error(e);
+      renderAdminBest(user, {}, '기록을 불러오지 못했습니다.');
+    }
+  }
+
+  window.openAdminBestByDocId = openBestFinal;
+  window.openAdminStudentBestModal = openBestFinal;
+  window.openAdminStudentBestPage = openBestFinal;
+
+  // 회원관리 카드 안에 버튼이 없으면 강제로 추가
+  function ensureBestButtons(){
+    const list = document.getElementById('admin-user-list');
+    if(!list) return;
+    const arr = getUsersSafe().filter(u => u && u.id !== 'ppc');
+    Array.from(list.children).forEach((card, idx) => {
+      if(card.dataset.finalBestBtn === '1') return;
+      const text = card.innerText || '';
+      const u = arr.find(x => (x.name && text.includes(x.name)) || (x.id && text.includes(x.id))) || arr[idx];
+      if(!u) return;
+      const key = u.docId || u.id || u.name;
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'w-full mt-3 bg-blue-700 hover:bg-blue-800 text-white py-3 rounded-2xl text-xs font-black shadow active:scale-[0.98]';
+      btn.textContent = 'BEST 기록 보기';
+      btn.onclick = function(e){ e.stopPropagation(); openBestFinal(key); };
+      card.appendChild(btn);
+      card.dataset.finalBestBtn = '1';
+    });
+  }
+
+  // setInterval(ensureBestButtons, 700); // 중복 버튼 방지를 위해 비활성화
+})();
+</script>
+
+
+<script id="ppc-admin-best-button-dedupe">
+(function(){
+  function dedupeBestButtons(){
+    document.querySelectorAll('#admin-user-list > *').forEach(card => {
+      const buttons = Array.from(card.querySelectorAll('button')).filter(b => (b.textContent || '').trim() === 'BEST 기록 보기');
+      buttons.forEach((btn, idx) => {
+        btn.style.display = idx === 0 ? '' : 'none';
+      });
+    });
+  }
+  document.addEventListener('DOMContentLoaded', dedupeBestButtons);
+  setInterval(dedupeBestButtons, 500);
+})();
+</script>
+
 </body>
 </html>
