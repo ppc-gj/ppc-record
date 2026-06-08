@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>PPC체대입시 실기 관리 시스템</title>
+    <title>경주PPC 실기 관리 시스템</title>
     <!-- 용량 최적화: 수시실기 이미지는 images/practical 폴더에서 불러옵니다. -->
     
     <!-- External Libraries -->
@@ -290,6 +290,15 @@ button[onclick="toggleAuthMode('signup')"]{
 
 <style id="ppc-branch-style">
 #reg-branch{color:#1e293b;font-weight:800;}
+</style>
+
+
+<style id="ppc-admin-branch-badge-dedupe">
+#admin-user-list > * > div:first-child.inline-flex,
+#admin-login-log-list > * > div:first-child.inline-flex,
+#admin-inactive-list > * > div:first-child.inline-flex{
+  display:none !important;
+}
 </style>
 
 </head>
@@ -931,7 +940,7 @@ button[onclick="toggleAuthMode('signup')"]{
         // Handle Signup process
         async function handleSignup() {
             try {
-                const fields = ['reg-id', 'reg-pw', 'reg-name', 'reg-school', 'reg-grade', 'reg-gender', 'reg-type', 'reg-college', 'reg-phone'];
+                const fields = ['reg-id', 'reg-pw', 'reg-name', 'reg-branch', 'reg-school', 'reg-grade', 'reg-gender', 'reg-type', 'reg-college', 'reg-phone'];
                 const data = {};
                 
                 for(let f of fields) {
@@ -939,8 +948,8 @@ button[onclick="toggleAuthMode('signup')"]{
                     data[f.split('-')[1]] = val;
                 }
 
-                if(!data.id || !data.pw || !data.name || !data.gender) {
-                    return showToast('이름, 아이디, 비밀번호, 성별은 필수 항목입니다.', 'error');
+                if(!data.id || !data.pw || !data.name || !data.gender || !data.branch) {
+                    return showToast('이름, 아이디, 비밀번호, 성별, 지점은 필수 항목입니다.', 'error');
                 }
                 
                 const docId = getUserDocId(data.id);
@@ -2412,6 +2421,11 @@ async function renderAdminPage() {
 
                 </div>
 
+                <button onclick="openAdminEditUserModal('${user.docId}')"
+                    class="w-full mt-3 bg-slate-900 hover:bg-slate-800 text-white py-3 rounded-2xl text-xs font-black shadow active:scale-[0.98]">
+                    회원정보 수정
+                </button>
+
                 <button onclick="openAdminBestByDocId('${user.docId}')"
                     class="w-full mt-3 bg-blue-700 hover:bg-blue-800 text-white py-3 rounded-2xl text-xs font-black shadow active:scale-[0.98]">
                     BEST 기록 보기
@@ -3443,10 +3457,7 @@ async function openAdminBestByDocId(docId){
         const text = card.innerText || '';
         const u = currentUsers.find(x => (x.name && text.includes(x.name)) || (x.id && text.includes(x.id))) || currentUsers[idx];
         const branch = (u && u.branch) || '경주';
-        const badge = document.createElement('div');
-        badge.className = 'mb-2 inline-flex items-center px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-[11px] font-black border border-blue-100';
-        badge.textContent = '지점: ' + branch;
-        card.insertBefore(badge, card.firstChild);
+        /* 지점 중복 표시 방지: 별도 뱃지 추가 제거 */
         card.dataset.branchShown = '1';
       });
     }catch(e){}
@@ -3530,10 +3541,7 @@ async function openAdminBestByDocId(docId){
         card.dataset.branch = branch;
 
         if(!text.includes('지점:')){
-          const badge = document.createElement('div');
-          badge.className = 'mb-2 inline-flex items-center px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-[11px] font-black border border-blue-100';
-          badge.textContent = '지점: ' + branch;
-          card.insertBefore(badge, card.firstChild);
+          /* 지점 중복 표시 방지: 별도 뱃지 추가 제거 */
         }
       });
     });
@@ -3544,6 +3552,309 @@ async function openAdminBestByDocId(docId){
   document.addEventListener('DOMContentLoaded', function(){
     setInterval(enrichAdminCardsWithBranch, 800);
   });
+})();
+</script>
+
+
+<script id="ppc-branch-migration-force-final">
+(function(){
+  async function forceBranchToGyeongju(){
+    try{
+      // 1) 메모리 users 배열 보정
+      if(typeof users !== 'undefined' && Array.isArray(users)){
+        let changed = false;
+        users.forEach(u => {
+          if(u && !u.branch){
+            u.branch = '경주';
+            changed = true;
+          }
+        });
+        if(changed){
+          try{ localStorage.setItem('users', JSON.stringify(users)); }catch(e){}
+          try{ localStorage.setItem('ppcUsers', JSON.stringify(users)); }catch(e){}
+        }
+      }
+
+      // 2) localStorage에 저장된 회원 데이터 보정
+      ['users','ppcUsers','PPC_USERS','students','members'].forEach(key => {
+        try{
+          const raw = localStorage.getItem(key);
+          if(!raw) return;
+          const data = JSON.parse(raw);
+          let changed = false;
+
+          if(Array.isArray(data)){
+            data.forEach(u => {
+              if(u && !u.branch){
+                u.branch = '경주';
+                changed = true;
+              }
+            });
+          }else if(data && typeof data === 'object'){
+            Object.values(data).forEach(u => {
+              if(u && typeof u === 'object' && !u.branch){
+                u.branch = '경주';
+                changed = true;
+              }
+            });
+          }
+
+          if(changed) localStorage.setItem(key, JSON.stringify(data));
+        }catch(e){}
+      });
+
+      // 3) Firebase users 컬렉션 보정
+      try{
+        if(typeof db !== 'undefined' && db && db.collection){
+          const snap = await db.collection('users').get();
+          const batch = db.batch();
+          let count = 0;
+          snap.forEach(doc => {
+            const data = doc.data() || {};
+            if(!data.branch){
+              batch.update(doc.ref, { branch: '경주' });
+              count++;
+            }
+          });
+          if(count > 0) await batch.commit();
+        }
+      }catch(e){
+        console.warn('Firebase branch migration skipped', e);
+      }
+
+      // 4) 현재 화면 카드에서 지점 값이 비어 있으면 경주로 표시
+      document.querySelectorAll('#admin-user-list .bg-slate-50').forEach(box => {
+        const label = box.querySelector('p.text-slate-400');
+        const value = box.querySelector('p.font-bold');
+        if(label && value && label.textContent.trim() === '지점' && !value.textContent.trim()){
+          value.textContent = '경주';
+        }
+      });
+
+      document.querySelectorAll('#admin-user-list > *').forEach(card => {
+        if(!card.dataset.branch) card.dataset.branch = '경주';
+      });
+
+      if(typeof applyAdminBranchFilter === 'function') applyAdminBranchFilter();
+    }catch(e){
+      console.warn('branch force patch error', e);
+    }
+  }
+
+  window.forceBranchToGyeongju = forceBranchToGyeongju;
+
+  document.addEventListener('DOMContentLoaded', function(){
+    forceBranchToGyeongju();
+    setTimeout(forceBranchToGyeongju, 1000);
+    setInterval(forceBranchToGyeongju, 3000);
+  });
+})();
+</script>
+
+
+<!-- 관리자 회원정보 수정 모달 -->
+<div id="admin-edit-user-modal" class="hidden fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-[1300] p-4 flex items-center justify-center">
+  <div class="bg-white w-full max-w-md rounded-[2rem] shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
+    <div class="bg-gradient-to-br from-blue-900 to-blue-700 text-white p-5">
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <p class="text-[10px] font-black text-blue-100 uppercase tracking-widest mb-1">Admin Edit Member</p>
+          <h3 class="text-2xl font-black">회원정보 수정</h3>
+        </div>
+        <button onclick="closeAdminEditUserModal()" class="w-9 h-9 rounded-full bg-white/15 border border-white/25 text-white font-black">×</button>
+      </div>
+    </div>
+
+    <div class="p-5 bg-slate-50 overflow-y-auto no-scrollbar flex-1 space-y-3">
+      <input type="hidden" id="admin-edit-docid">
+      <div>
+        <label class="text-[10px] font-black text-slate-400 ml-2">이름</label>
+        <input id="admin-edit-name" class="form-input" type="text" placeholder="이름">
+      </div>
+      <div>
+        <label class="text-[10px] font-black text-slate-400 ml-2">지점</label>
+        <select id="admin-edit-branch" class="form-input">
+          <option value="경주">경주</option>
+          <option value="분당">분당</option>
+          <option value="수지">수지</option>
+          <option value="강동">강동</option>
+          <option value="강북">강북</option>
+          <option value="구리">구리</option>
+        </select>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="text-[10px] font-black text-slate-400 ml-2">학교</label>
+          <input id="admin-edit-school" class="form-input" type="text" placeholder="학교">
+        </div>
+        <div>
+          <label class="text-[10px] font-black text-slate-400 ml-2">학년</label>
+          <select id="admin-edit-grade" class="form-input">
+            <option value="1">1학년</option>
+            <option value="2">2학년</option>
+            <option value="3">3학년</option>
+            <option value="N">N수생</option>
+          </select>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="text-[10px] font-black text-slate-400 ml-2">전형</label>
+          <select id="admin-edit-type" class="form-input">
+            <option value="수시">수시</option>
+            <option value="정시">정시</option>
+            <option value="수시+정시">수시+정시</option>
+            <option value="예비">예비</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-[10px] font-black text-slate-400 ml-2">성별</label>
+          <select id="admin-edit-gender" class="form-input">
+            <option value="male">남자</option>
+            <option value="female">여자</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label class="text-[10px] font-black text-slate-400 ml-2">핸드폰</label>
+        <input id="admin-edit-phone" class="form-input" type="tel" placeholder="핸드폰">
+      </div>
+      <div>
+        <label class="text-[10px] font-black text-slate-400 ml-2">목표대학</label>
+        <input id="admin-edit-college" class="form-input" type="text" placeholder="목표대학">
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="text-[10px] font-black text-slate-400 ml-2">아이디</label>
+          <input id="admin-edit-id" class="form-input" type="text" placeholder="아이디">
+        </div>
+        <div>
+          <label class="text-[10px] font-black text-slate-400 ml-2">비밀번호</label>
+          <input id="admin-edit-pw" class="form-input" type="text" placeholder="비밀번호">
+        </div>
+      </div>
+    </div>
+
+    <div class="p-4 bg-white border-t border-slate-100">
+      <button onclick="saveAdminEditUser()" class="w-full bg-blue-700 hover:bg-blue-800 text-white p-4 rounded-2xl font-black shadow-lg active:scale-[0.98]">
+        수정 저장
+      </button>
+    </div>
+  </div>
+</div>
+
+
+<script id="ppc-admin-edit-user-script">
+(function(){
+  function getDb(){
+    try{ if(typeof db !== 'undefined') return db; }catch(e){}
+    try{ if(window.firebase && firebase.firestore) return firebase.firestore(); }catch(e){}
+    return null;
+  }
+
+  function getUsersArray(){
+    try{ if(typeof users !== 'undefined' && Array.isArray(users)) return users; }catch(e){}
+    try{ if(window.users && Array.isArray(window.users)) return window.users; }catch(e){}
+    return [];
+  }
+
+  function findUserByDocId(docId){
+    const arr = getUsersArray();
+    return arr.find(u => String(u.docId || '') === String(docId) || String(u.id || '') === String(docId)) || null;
+  }
+
+  window.openAdminEditUserModal = async function(docId){
+    let user = findUserByDocId(docId);
+    const dbx = getDb();
+
+    try{
+      if(dbx && docId){
+        const snap = await dbx.collection('users').doc(docId).get();
+        if(snap.exists) user = { docId: snap.id, ...snap.data() };
+      }
+    }catch(e){}
+
+    if(!user){
+      if(typeof showToast === 'function') showToast('회원 정보를 찾지 못했습니다.', 'error');
+      else alert('회원 정보를 찾지 못했습니다.');
+      return;
+    }
+
+    document.getElementById('admin-edit-docid').value = user.docId || docId || user.id || '';
+    document.getElementById('admin-edit-name').value = user.name || '';
+    document.getElementById('admin-edit-branch').value = user.branch || '경주';
+    document.getElementById('admin-edit-school').value = user.school || '';
+    document.getElementById('admin-edit-grade').value = user.grade || '';
+    document.getElementById('admin-edit-type').value = user.type || '';
+    document.getElementById('admin-edit-gender').value = user.gender || 'male';
+    document.getElementById('admin-edit-phone').value = user.phone || '';
+    document.getElementById('admin-edit-college').value = user.college || '';
+    document.getElementById('admin-edit-id').value = user.id || '';
+    document.getElementById('admin-edit-pw').value = user.pw || '';
+
+    document.getElementById('admin-edit-user-modal').classList.remove('hidden');
+  };
+
+  window.closeAdminEditUserModal = function(){
+    const modal = document.getElementById('admin-edit-user-modal');
+    if(modal) modal.classList.add('hidden');
+  };
+
+  window.saveAdminEditUser = async function(){
+    const docId = document.getElementById('admin-edit-docid').value;
+    const updated = {
+      name: document.getElementById('admin-edit-name').value.trim(),
+      branch: document.getElementById('admin-edit-branch').value || '경주',
+      school: document.getElementById('admin-edit-school').value.trim(),
+      grade: document.getElementById('admin-edit-grade').value,
+      type: document.getElementById('admin-edit-type').value,
+      gender: document.getElementById('admin-edit-gender').value,
+      phone: document.getElementById('admin-edit-phone').value.trim(),
+      college: document.getElementById('admin-edit-college').value.trim(),
+      id: document.getElementById('admin-edit-id').value.trim(),
+      pw: document.getElementById('admin-edit-pw').value.trim()
+    };
+
+    if(!updated.name || !updated.id || !updated.pw){
+      if(typeof showToast === 'function') showToast('이름, 아이디, 비밀번호는 필수입니다.', 'error');
+      else alert('이름, 아이디, 비밀번호는 필수입니다.');
+      return;
+    }
+
+    try{
+      const dbx = getDb();
+      if(dbx && docId){
+        await dbx.collection('users').doc(docId).update(updated);
+      }
+
+      // 메모리 users 배열도 즉시 반영
+      const arr = getUsersArray();
+      const target = arr.find(u => String(u.docId || '') === String(docId) || String(u.id || '') === String(docId));
+      if(target) Object.assign(target, updated, {docId: docId || target.docId});
+
+      try{ localStorage.setItem('users', JSON.stringify(arr)); }catch(e){}
+      try{ localStorage.setItem('ppcUsers', JSON.stringify(arr)); }catch(e){}
+
+      closeAdminEditUserModal();
+
+      if(typeof showToast === 'function') showToast('회원정보가 수정되었습니다.', 'success');
+      else alert('회원정보가 수정되었습니다.');
+
+      // 관리자 목록 새로고침
+      try{
+        if(typeof loadUsersFromFirebase === 'function') await loadUsersFromFirebase();
+        if(typeof renderAdminPage === 'function') renderAdminPage();
+        if(typeof showAdminTab === 'function') showAdminTab('users');
+        if(typeof applyAdminBranchFilter === 'function') applyAdminBranchFilter();
+      }catch(e){
+        location.reload();
+      }
+    }catch(error){
+      console.error(error);
+      if(typeof showToast === 'function') showToast('수정 저장에 실패했습니다.', 'error');
+      else alert('수정 저장에 실패했습니다.');
+    }
+  };
 })();
 </script>
 
