@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>PPC 실기 관리 시스템</title>
+    <title>경주PPC 실기 관리 시스템</title>
     <!-- 용량 최적화: 수시실기 이미지는 images/practical 폴더에서 불러옵니다. -->
     
     <!-- External Libraries -->
@@ -287,6 +287,11 @@ button[onclick="toggleAuthMode('signup')"]{
 }
 </style>
 
+
+<style id="ppc-branch-style">
+#reg-branch{color:#1e293b;font-weight:800;}
+</style>
+
 </head>
 <body class="max-w-md mx-auto min-h-screen shadow-2xl relative bg-slate-50 overflow-x-hidden">
 
@@ -387,6 +392,17 @@ button[onclick="toggleAuthMode('signup')"]{
             <div class="space-y-1">
                 <label class="text-[10px] font-bold text-slate-400 ml-2">기본 정보</label>
                 <input id="reg-name" type="text" placeholder="이름" class="form-input">
+
+<select id="reg-branch" class="form-input">
+    <option value="">지점 선택</option>
+    <option value="경주">경주</option>
+    <option value="분당">분당</option>
+    <option value="수지">수지</option>
+    <option value="강동">강동</option>
+    <option value="강북">강북</option>
+    <option value="구리">구리</option>
+</select>
+
             </div>
             <div class="grid grid-cols-2 gap-3">
                 <input id="reg-school" type="text" placeholder="학교" class="form-input">
@@ -699,6 +715,20 @@ button[onclick="toggleAuthMode('signup')"]{
         <button id="admin-tab-logs" onclick="showAdminTab('logs')" class="admin-tab-btn text-slate-500 px-3 py-3 rounded-xl text-xs font-black">로그인기록</button>
         <button id="admin-tab-inactive" onclick="showAdminTab('inactive')" class="admin-tab-btn text-slate-500 px-3 py-3 rounded-xl text-xs font-black">미접속학생</button>
     </div>
+
+
+<div id="admin-branch-filter-wrap" class="bg-white border border-blue-100 rounded-2xl p-3 shadow-sm">
+  <p class="text-[10px] font-black text-slate-400 mb-2">지점별 보기</p>
+  <div class="grid grid-cols-4 gap-2">
+    <button data-branch-filter="전체" onclick="setAdminBranchFilter('전체')" class="admin-branch-filter-btn bg-blue-700 text-white px-2 py-2 rounded-xl text-xs font-black">전체</button>
+    <button data-branch-filter="경주" onclick="setAdminBranchFilter('경주')" class="admin-branch-filter-btn bg-slate-100 text-slate-600 px-2 py-2 rounded-xl text-xs font-black">경주</button>
+    <button data-branch-filter="분당" onclick="setAdminBranchFilter('분당')" class="admin-branch-filter-btn bg-slate-100 text-slate-600 px-2 py-2 rounded-xl text-xs font-black">분당</button>
+    <button data-branch-filter="수지" onclick="setAdminBranchFilter('수지')" class="admin-branch-filter-btn bg-slate-100 text-slate-600 px-2 py-2 rounded-xl text-xs font-black">수지</button>
+    <button data-branch-filter="강동" onclick="setAdminBranchFilter('강동')" class="admin-branch-filter-btn bg-slate-100 text-slate-600 px-2 py-2 rounded-xl text-xs font-black">강동</button>
+    <button data-branch-filter="강북" onclick="setAdminBranchFilter('강북')" class="admin-branch-filter-btn bg-slate-100 text-slate-600 px-2 py-2 rounded-xl text-xs font-black">강북</button>
+    <button data-branch-filter="구리" onclick="setAdminBranchFilter('구리')" class="admin-branch-filter-btn bg-slate-100 text-slate-600 px-2 py-2 rounded-xl text-xs font-black">구리</button>
+  </div>
+</div>
 
     <div id="admin-user-list" class="space-y-3"></div>
     <div id="admin-login-log-list" class="space-y-3 hidden"></div>
@@ -2341,6 +2371,11 @@ async function renderAdminPage() {
                 <div class="grid grid-cols-2 gap-2 text-sm">
 
                     <div class="bg-slate-50 rounded-xl p-3">
+                        <p class="text-slate-400 text-[10px] font-bold">지점</p>
+                        <p class="font-bold">${user.branch || '경주'}</p>
+                    </div>
+
+                    <div class="bg-slate-50 rounded-xl p-3">
                         <p class="text-slate-400 text-[10px] font-bold">학교</p>
                         <p class="font-bold">${user.school || '-'}</p>
                     </div>
@@ -3332,6 +3367,183 @@ async function openAdminBestByDocId(docId){
   }
   document.addEventListener('DOMContentLoaded', dedupeBestButtons);
   setInterval(dedupeBestButtons, 500);
+})();
+</script>
+
+
+<script id="ppc-branch-final-patch">
+(function(){
+  async function migrateExistingUsersBranch(){
+    try{
+      if(typeof users !== 'undefined' && Array.isArray(users)){
+        let changed = false;
+        users.forEach(u => {
+          if(u && !u.branch){
+            u.branch = '경주';
+            changed = true;
+          }
+        });
+        if(changed){
+          try{ localStorage.setItem('users', JSON.stringify(users)); }catch(e){}
+          try{ localStorage.setItem('ppcUsers', JSON.stringify(users)); }catch(e){}
+        }
+      }
+
+      if(typeof db !== 'undefined' && db && db.collection){
+        const snap = await db.collection('users').get();
+        const batch = db.batch();
+        let count = 0;
+        snap.forEach(doc => {
+          const data = doc.data() || {};
+          if(!data.branch){
+            batch.update(doc.ref, { branch: '경주' });
+            count++;
+          }
+        });
+        if(count > 0) await batch.commit();
+      }
+    }catch(e){ console.warn('branch migration skipped', e); }
+  }
+
+  const originalHandleSignup = window.handleSignup;
+  if(typeof originalHandleSignup === 'function' && !window.__ppcBranchSignupWrapped){
+    window.__ppcBranchSignupWrapped = true;
+    window.handleSignup = function(){
+      const branchEl = document.getElementById('reg-branch');
+      const branch = branchEl ? branchEl.value : '';
+
+      if(!branch){
+        if(typeof showToast === 'function') showToast('지점을 선택해주세요.', 'error');
+        else alert('지점을 선택해주세요.');
+        return;
+      }
+
+      window.__selectedBranchForSignup = branch;
+      const result = originalHandleSignup.apply(this, arguments);
+      setTimeout(migrateExistingUsersBranch, 800);
+      return result;
+    };
+  }
+
+  // Firestore set/add 저장 직후 branch 누락 시 보정
+  const originalShowToast = window.showToast;
+  window.__ensureBranchAfterSignup = function(){
+    setTimeout(async () => {
+      await migrateExistingUsersBranch();
+    }, 1200);
+  };
+
+  function addBranchToAdminCards(){
+    try{
+      const list = document.getElementById('admin-user-list');
+      if(!list) return;
+      const currentUsers = (typeof users !== 'undefined' && Array.isArray(users)) ? users : [];
+      Array.from(list.children).forEach((card, idx) => {
+        if(card.dataset.branchShown === '1') return;
+        const text = card.innerText || '';
+        const u = currentUsers.find(x => (x.name && text.includes(x.name)) || (x.id && text.includes(x.id))) || currentUsers[idx];
+        const branch = (u && u.branch) || '경주';
+        const badge = document.createElement('div');
+        badge.className = 'mb-2 inline-flex items-center px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-[11px] font-black border border-blue-100';
+        badge.textContent = '지점: ' + branch;
+        card.insertBefore(badge, card.firstChild);
+        card.dataset.branchShown = '1';
+      });
+    }catch(e){}
+  }
+
+  document.addEventListener('DOMContentLoaded', function(){
+    migrateExistingUsersBranch();
+    setInterval(addBranchToAdminCards, 1000);
+  });
+})();
+</script>
+
+
+<script id="ppc-admin-branch-filter-script">
+(function(){
+  window.adminBranchFilter = window.adminBranchFilter || '전체';
+
+  window.setAdminBranchFilter = function(branch){
+    window.adminBranchFilter = branch || '전체';
+
+    document.querySelectorAll('.admin-branch-filter-btn').forEach(btn => {
+      const active = btn.dataset.branchFilter === window.adminBranchFilter;
+      btn.className = active
+        ? 'admin-branch-filter-btn bg-blue-700 text-white px-2 py-2 rounded-xl text-xs font-black'
+        : 'admin-branch-filter-btn bg-slate-100 text-slate-600 px-2 py-2 rounded-xl text-xs font-black';
+    });
+
+    applyAdminBranchFilter();
+  };
+
+  function getUserBranchFromCard(card){
+    if(card.dataset.branch) return card.dataset.branch;
+    const text = card.innerText || '';
+    const branches = ['경주','분당','수지','강동','강북','구리'];
+    for(const b of branches){
+      if(text.includes('지점: ' + b) || text.includes('지점\n' + b) || text.includes('지점 ' + b)) return b;
+    }
+    return '경주';
+  }
+
+  window.applyAdminBranchFilter = function(){
+    const selected = window.adminBranchFilter || '전체';
+
+    const lists = [
+      document.getElementById('admin-user-list'),
+      document.getElementById('admin-login-log-list'),
+      document.getElementById('admin-inactive-list')
+    ].filter(Boolean);
+
+    lists.forEach(list => {
+      Array.from(list.children).forEach(card => {
+        if(card.nodeType !== 1) return;
+        const branch = getUserBranchFromCard(card);
+        card.style.display = (selected === '전체' || branch === selected) ? '' : 'none';
+      });
+    });
+  };
+
+  // 로그인기록/미접속학생 카드에는 지점 표시가 없을 수 있으므로 회원정보와 이름/아이디 매칭해서 지점 뱃지 부여
+  function enrichAdminCardsWithBranch(){
+    let userArr = [];
+    try{ if(typeof users !== 'undefined' && Array.isArray(users)) userArr = users; }catch(e){}
+    const lists = [
+      document.getElementById('admin-user-list'),
+      document.getElementById('admin-login-log-list'),
+      document.getElementById('admin-inactive-list')
+    ].filter(Boolean);
+
+    lists.forEach(list => {
+      Array.from(list.children).forEach(card => {
+        if(card.nodeType !== 1) return;
+        if(card.dataset.branch) return;
+
+        const text = card.innerText || '';
+        const u = userArr.find(x =>
+          (x.name && text.includes(x.name)) ||
+          (x.id && text.includes(x.id)) ||
+          (x.phone && text.includes(x.phone))
+        );
+        const branch = (u && u.branch) || '경주';
+        card.dataset.branch = branch;
+
+        if(!text.includes('지점:')){
+          const badge = document.createElement('div');
+          badge.className = 'mb-2 inline-flex items-center px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-[11px] font-black border border-blue-100';
+          badge.textContent = '지점: ' + branch;
+          card.insertBefore(badge, card.firstChild);
+        }
+      });
+    });
+
+    applyAdminBranchFilter();
+  }
+
+  document.addEventListener('DOMContentLoaded', function(){
+    setInterval(enrichAdminCardsWithBranch, 800);
+  });
 })();
 </script>
 
