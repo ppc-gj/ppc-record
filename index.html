@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>PPC 실기 관리 시스템</title>
+    <title>경주PPC 실기 관리 시스템</title>
     <!-- 용량 최적화: 수시실기 이미지는 images/practical 폴더에서 불러옵니다. -->
     
     <!-- External Libraries -->
@@ -953,6 +953,26 @@ button[onclick="toggleAuthMode('signup')"]{
         let tableGender = "male";
         let chartInstance = null;
 
+        // 통계/기록 화면용 종목 목록: 기본 종목 + 추가 종목 + 실제 저장된 기록 종목을 모두 합칩니다.
+        // 예전에 입력한 학교별 종목이 currentUser.extraEvents에 없더라도 통계창에 자동 표시됩니다.
+        function getMeasuredEventList() {
+            const eventSet = new Set();
+            Object.keys(MASTER_DATA).filter(k => MASTER_DATA[k].isBasic).forEach(k => eventSet.add(k));
+            (currentUser?.extraEvents || []).forEach(k => { if(MASTER_DATA[k]) eventSet.add(k); });
+            (currentUser?.records || []).forEach(record => {
+                Object.keys(record.values || {}).forEach(k => { if(MASTER_DATA[k]) eventSet.add(k); });
+            });
+            return Array.from(eventSet);
+        }
+
+        function ensureActiveChartTab() {
+            const events = getMeasuredEventList();
+            if(!events.includes(activeChartTab)) {
+                activeChartTab = events[0] || Object.keys(MASTER_DATA).find(k => MASTER_DATA[k].isBasic) || "제자리멀리뛰기";
+            }
+            return events;
+        }
+
         function getUserDocId(id) {
             return encodeURIComponent(id);
         }
@@ -1119,10 +1139,8 @@ button[onclick="toggleAuthMode('signup')"]{
             });
             
             if(vid === 'chart') {
-                // Ensure first tab is active if none selected or if switching
-                if(![...Object.keys(MASTER_DATA).filter(k=>MASTER_DATA[k].isBasic), ...(currentUser.extraEvents||[])].includes(activeChartTab)) {
-                    activeChartTab = Object.keys(MASTER_DATA).find(k=>MASTER_DATA[k].isBasic) || "제자리멀리뛰기";
-                }
+                // 기본 종목뿐 아니라 실제 저장된 기록 종목도 통계 탭에 포함
+                ensureActiveChartTab();
                 renderChart();
             }
             if(vid === 'table') {
@@ -1317,7 +1335,7 @@ button[onclick="toggleAuthMode('signup')"]{
         // Render Chart using Chart.js
         function renderChart() {
             const tabs = document.getElementById('chart-tabs');
-            const events = [...Object.keys(MASTER_DATA).filter(k=>MASTER_DATA[k].isBasic), ...(currentUser.extraEvents||[])];
+            const events = ensureActiveChartTab();
             
             // Tabs setup
             tabs.innerHTML = events.map(e => `
@@ -1328,7 +1346,8 @@ button[onclick="toggleAuthMode('signup')"]{
             `).join('');
             
             // Chart Data Prep
-            const filteredRecords = currentUser.records.filter(r => r.values[activeChartTab] !== undefined);
+            const eventInfo = MASTER_DATA[activeChartTab] || { unit: '', isLowerBetter: false };
+            const filteredRecords = (currentUser.records || []).filter(r => r.values && r.values[activeChartTab] !== undefined);
             
             const emptyState = document.getElementById('chart-empty-state');
             const canvas = document.getElementById('mainChart');
@@ -1387,7 +1406,7 @@ button[onclick="toggleAuthMode('signup')"]{
                                 displayColors: false,
                                 callbacks: {
                                     label: function(context) {
-                                        return context.parsed.y + MASTER_DATA[activeChartTab].unit;
+                                        return context.parsed.y + eventInfo.unit;
                                     }
                                 }
                             }
@@ -1395,7 +1414,7 @@ button[onclick="toggleAuthMode('signup')"]{
                         scales: {
                             y: { 
                                 beginAtZero: false,
-                                reverse: MASTER_DATA[activeChartTab].isLowerBetter,
+                                reverse: eventInfo.isLowerBetter,
                                 grid: { color: '#f1f5f9', drawBorder: false },
                                 ticks: { font: { family: 'Noto Sans KR' }, color: '#94a3b8' }
                             },
@@ -1408,7 +1427,7 @@ button[onclick="toggleAuthMode('signup')"]{
                 });
                 
                 // Render History Log + BEST 표시
-                const bestValue = MASTER_DATA[activeChartTab].isLowerBetter
+                const bestValue = eventInfo.isLowerBetter
                     ? Math.min(...filteredRecords.map(r => Number(r.values[activeChartTab])))
                     : Math.max(...filteredRecords.map(r => Number(r.values[activeChartTab])));
 
@@ -1428,7 +1447,7 @@ button[onclick="toggleAuthMode('signup')"]{
                                 </div>
                             </div>
                             <span class="text-sm font-black ${isBest ? 'text-yellow-900 bg-yellow-200 border-yellow-300' : 'text-slate-800 bg-slate-50 border-slate-100'} px-3 py-1 rounded-lg border">
-                                ${r.values[activeChartTab]}<span class="text-[10px] ${isBest ? 'text-yellow-700' : 'text-slate-400'} ml-1">${MASTER_DATA[activeChartTab].unit}</span>
+                                ${r.values[activeChartTab]}<span class="text-[10px] ${isBest ? 'text-yellow-700' : 'text-slate-400'} ml-1">${eventInfo.unit}</span>
                             </span>
                         </div>
                     `;
@@ -1742,12 +1761,12 @@ button[onclick="toggleAuthMode('signup')"]{
             const maleMax = getBestScoreKey(activeChartTab, 'male');
             const femaleMax = getBestScoreKey(activeChartTab, 'female');
             
-            document.getElementById('summary-male').innerText = maleMax + MASTER_DATA[activeChartTab].unit;
-            document.getElementById('summary-female').innerText = femaleMax + MASTER_DATA[activeChartTab].unit;
+            document.getElementById('summary-male').innerText = maleMax + eventInfo.unit;
+            document.getElementById('summary-female').innerText = femaleMax + eventInfo.unit;
             document.getElementById('summary-title').innerText = activeChartTab;
 
             document.getElementById('table-head').innerHTML = `
-                <th class="p-4 w-1/2">측정 기록 <span class="text-[10px] font-normal text-slate-400">(${MASTER_DATA[activeChartTab].unit})</span></th>
+                <th class="p-4 w-1/2">측정 기록 <span class="text-[10px] font-normal text-slate-400">(${eventInfo.unit})</span></th>
                 <th class="p-4 w-1/2 border-l border-white/50">환산 점수</th>
             `;
             
