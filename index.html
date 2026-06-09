@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>PPC 실기 관리 시스템</title>
+    <title>경주PPC 실기 관리 시스템</title>
     <!-- 용량 최적화: 수시실기 이미지는 images/practical 폴더에서 불러옵니다. -->
     
     <!-- External Libraries -->
@@ -1754,25 +1754,28 @@ button[onclick="toggleAuthMode('signup')"]{
                 </button>
             `).join('');
             
-            const table = MASTER_DATA[activeChartTab][tableGender];
+            const eventInfo = MASTER_DATA[activeChartTab] || { unit: '', male: {}, female: {} };
+            const table = eventInfo[tableGender] || eventInfo.male || eventInfo.female || {};
             const sortedKeys = sortScoreKeys(activeChartTab, table);
             
             // Update Summary Cards - 학교별 배점은 100점 만점이 아닐 수 있어 최고점 기록을 기준으로 표시
-            const maleMax = getBestScoreKey(activeChartTab, 'male');
-            const femaleMax = getBestScoreKey(activeChartTab, 'female');
+            const maleMax = eventInfo.male ? getBestScoreKey(activeChartTab, 'male') : '-';
+            const femaleMax = eventInfo.female ? getBestScoreKey(activeChartTab, 'female') : '-';
             
-            document.getElementById('summary-male').innerText = maleMax + eventInfo.unit;
-            document.getElementById('summary-female').innerText = femaleMax + eventInfo.unit;
+            document.getElementById('summary-male').innerText = maleMax === '-' ? '-' : maleMax + (eventInfo.unit || '');
+            document.getElementById('summary-female').innerText = femaleMax === '-' ? '-' : femaleMax + (eventInfo.unit || '');
             document.getElementById('summary-title').innerText = activeChartTab;
 
             document.getElementById('table-head').innerHTML = `
-                <th class="p-4 w-1/2">측정 기록 <span class="text-[10px] font-normal text-slate-400">(${eventInfo.unit})</span></th>
+                <th class="p-4 w-1/2">측정 기록 <span class="text-[10px] font-normal text-slate-400">(${eventInfo.unit || ''})</span></th>
                 <th class="p-4 w-1/2 border-l border-white/50">환산 점수</th>
             `;
             
-            document.getElementById('table-body').innerHTML = sortedKeys.map(k => {
+            const scoreValues = Object.values(table).map(Number).filter(v => !isNaN(v));
+            const maxScore = scoreValues.length ? Math.max(...scoreValues) : null;
+            document.getElementById('table-body').innerHTML = sortedKeys.length ? sortedKeys.map(k => {
                 const score = table[k];
-                const isMax = Number(score) === Math.max(...Object.values(table).map(Number));
+                const isMax = maxScore !== null && Number(score) === maxScore;
                 return `
                 <tr class="transition-colors hover:bg-slate-50 ${isMax ? 'bg-indigo-50/50' : ''}">
                     <td class="p-3 font-bold text-slate-800 text-sm border-r border-slate-50">${k}</td>
@@ -1780,7 +1783,7 @@ button[onclick="toggleAuthMode('signup')"]{
                         ${score} <span class="text-[10px] font-normal ${isMax ? 'text-indigo-400' : 'text-slate-400'}">점</span>
                     </td>
                 </tr>
-            `}).join('');
+            `}).join('') : `<tr><td colspan="2" class="p-8 text-slate-400 font-bold">등록된 배점표가 없습니다.</td></tr>`;
         }
 
         // Toggle Gender in Table View
