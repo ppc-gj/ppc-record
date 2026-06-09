@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>PPC 실기 관리 시스템</title>
+    <title>경주PPC 실기 관리 시스템</title>
     <!-- 용량 최적화: 수시실기 이미지는 images/practical 폴더에서 불러옵니다. -->
     
     <!-- External Libraries -->
@@ -289,7 +289,7 @@ button[onclick="toggleAuthMode('signup')"]{
 
 
 <style id="ppc-branch-style">
-#reg-branch{color:#1e293b;font-weight:800;}
+#reg-branch,#reg-role{color:#1e293b;font-weight:800;}
 </style>
 
 
@@ -402,6 +402,7 @@ button[onclick="toggleAuthMode('signup')"]{
                 <label class="text-[10px] font-bold text-slate-400 ml-2">기본 정보</label>
                 <input id="reg-name" type="text" placeholder="이름" class="form-input">
 
+<div class="grid grid-cols-2 gap-3">
 <select id="reg-branch" class="form-input">
     <option value="">지점 선택</option>
     <option value="경주">경주</option>
@@ -411,6 +412,12 @@ button[onclick="toggleAuthMode('signup')"]{
     <option value="강북">강북</option>
     <option value="구리">구리</option>
 </select>
+<select id="reg-role" class="form-input">
+    <option value="학생" selected>학생</option>
+    <option value="강사">강사</option>
+    <option value="대표">대표</option>
+</select>
+</div>
 
             </div>
             <div class="grid grid-cols-2 gap-3">
@@ -880,6 +887,22 @@ button[onclick="toggleAuthMode('signup')"]{
             "배구(30초)": { unit: "개", isBasic: false, isLowerBetter: false, male: genTbl(29, -1), female: genTbl(24, -1) },
             "중량달리기": { unit: "sec", isBasic: false, isLowerBetter: true, male: genTbl(7.19, 0.04), female: genTbl(7.60, 0.04) },
             "20m(콘)": { unit: "sec", isBasic: false, isLowerBetter: true, male: genTbl(14.0, 0.1), female: genTbl(15.0, 0.1) }
+
+            ,
+            // 학교별 배점표 항목: 사용자가 추가한 엑셀 하단 표를 측정화면/배점표에 연결
+            "고려대 높이뛰기": { unit: "cm", isBasic: false, isLowerBetter: false, schoolEvent: true, male: { "162":300, "160":297, "158":294, "156":291, "154":288, "152":285, "150":282, "148":279, "146":276, "144":255, "142":234, "140":213, "139.99":183 }, female: { "130":300, "128":297, "126":294, "124":291, "122":288, "120":285, "118":282, "116":279, "114":276, "112":255, "110":234, "108":213, "107.99":183 } },
+            "고려대 농구": { unit: "개", isBasic: false, isLowerBetter: false, schoolEvent: true, male: { "21":300, "20":297, "19":294, "18":291, "17":288, "16":285, "15":282, "14":279, "13":276, "12":255, "11":234, "10":213, "9.99":183 }, female: { "17":300, "16":297, "15":294, "14":291, "13":288, "12":285, "11":282, "10":279, "9":276, "8":255, "7":234, "6":213, "5.99":183 } },
+            "고려대 지그재그": { unit: "sec", isBasic: false, isLowerBetter: true, schoolEvent: true, male: { "30":300, "30.5":297, "31":294, "31.5":291, "32":288, "32.5":285, "33":282, "33.5":279, "34":276, "34.5":255, "35":234, "35.5":213, "1035.5":183 }, female: { "33.5":300, "34":297, "34.5":294, "35":291, "35.5":288, "36":285, "36.5":282, "37":279, "37.5":276, "38":255, "38.5":234, "39":213, "1039":183 } },
+            "건국대 싯업": { unit: "회", isBasic: false, isLowerBetter: false, schoolEvent: true, male: { "72":80, "71":78, "70":76, "69":74, "68":72, "67":70, "66":68, "65":66, "64":64, "63":62, "62":60, "61":58, "60":56, "59":54, "58":52, "57":50, "56":48, "55":46, "54":44, "53":42, "52.99":40 }, female: { "67":80, "66":78, "65":76, "64":74, "63":72, "62":70, "61":68, "60":66, "59":64, "58":62, "57":60, "56":58, "55":56, "54":54, "53":52, "52":50, "51":48, "50":46, "49":44, "48":42, "47.99":40 } },
+            "건국대 20m": { unit: "sec", isBasic: false, isLowerBetter: true, schoolEvent: true, male: { "13.8":80, "13.95":78, "14.1":76, "14.25":74, "14.4":72, "14.55":70, "14.7":68, "14.85":66, "15":64, "15.15":62, "15.3":60, "15.45":58, "15.6":56, "15.75":54, "15.9":52, "16.05":50, "16.2":48, "16.35":46, "16.5":44, "16.65":42, "1016.65":40 }, female: { "14.8":80, "14.95":78, "15.1":76, "15.25":74, "15.4":72, "15.55":70, "15.7":68, "15.85":66, "16":64, "16.15":62, "16.3":60, "16.45":58, "16.6":56, "16.75":54, "16.9":52, "17.05":50, "17.2":48, "17.35":46, "17.5":44, "17.65":42, "1017.65":40 } },
+            "건국대 높이뛰기": { unit: "등급", isBasic: false, isLowerBetter: false, schoolEvent: true, isGradeTable: true, male: { "A":80, "B":75, "C":70, "D":65, "E":60, "F":55, "G":50, "H":45, "I":40 }, female: { "A":80, "B":75, "C":70, "D":65, "E":60, "F":55, "G":50, "H":45, "I":40 } },
+            "건국대 농구": { unit: "등급", isBasic: false, isLowerBetter: false, schoolEvent: true, isGradeTable: true, male: { "A":80, "B":75, "C":70, "D":65, "E":60, "F":55, "G":50, "H":45, "I":40 }, female: { "A":80, "B":75, "C":70, "D":65, "E":60, "F":55, "G":50, "H":45, "I":40 } },
+            "건국대 핸드스프링": { unit: "등급", isBasic: false, isLowerBetter: false, schoolEvent: true, isGradeTable: true, male: { "A":80, "B":75, "C":70, "D":65, "E":60, "F":55, "G":50, "H":45, "I":40 }, female: { "A":80, "B":75, "C":70, "D":65, "E":60, "F":55, "G":50, "H":45, "I":40 } },
+            "단국대 10m": { unit: "sec", isBasic: false, isLowerBetter: true, schoolEvent: true, male: { "9.9":100, "10.11":92, "10.31":84, "10.51":76, "10.71":68, "10.91":60, "11.11":52, "11.31":44, "11.51":36 }, female: { "11":100, "11.21":92, "11.41":84, "11.61":76, "11.81":68, "12.01":60, "12.21":52, "12.41":44, "12.61":36 } },
+            "단국대 높이뛰기": { unit: "cm", isBasic: false, isLowerBetter: false, schoolEvent: true, male: { "155":100, "150":92, "145":84, "140":76, "135":68, "130":60, "125":52, "120":44, "115":36 }, female: { "125":100, "120":92, "115":84, "110":76, "105":68, "100":60, "95":52, "90":44, "85":36 } },
+            "단국대 좌전굴": { unit: "cm", isBasic: false, isLowerBetter: false, schoolEvent: true, male: { "29.6":100, "27.2":92, "25":84, "22.5":76, "19.2":68, "15.6":60, "12.2":52, "10.1":44, "0":36 }, female: { "32.6":100, "31.3":92, "29":84, "25.3":76, "23.2":68, "20.1":60, "17.1":52, "15.1":44, "0":36 } },
+            "단국대 배구": { unit: "개", isBasic: false, isLowerBetter: false, schoolEvent: true, male: { "28":100, "26":92, "23":84, "21":76, "19":68, "17":60, "14":52, "11":44, "1":36 }, female: { "23":100, "21":92, "19":84, "17":76, "15":68, "13":60, "11":52, "9":44, "1":36 } }
+
         };
 
 
@@ -949,13 +972,15 @@ button[onclick="toggleAuthMode('signup')"]{
         // Handle Signup process
         async function handleSignup() {
             try {
-                const fields = ['reg-id', 'reg-pw', 'reg-name', 'reg-branch', 'reg-school', 'reg-grade', 'reg-gender', 'reg-type', 'reg-college', 'reg-phone'];
+                const fields = ['reg-id', 'reg-pw', 'reg-name', 'reg-branch', 'reg-role', 'reg-school', 'reg-grade', 'reg-gender', 'reg-type', 'reg-college', 'reg-phone'];
                 const data = {};
                 
                 for(let f of fields) {
                     const val = document.getElementById(f).value.trim();
                     data[f.split('-')[1]] = val;
                 }
+
+                data.role = data.role || '학생';
 
                 if(!data.id || !data.pw || !data.name || !data.gender || !data.branch) {
                     return showToast('이름, 아이디, 비밀번호, 성별, 지점은 필수 항목입니다.', 'error');
@@ -1680,6 +1705,26 @@ button[onclick="toggleAuthMode('signup')"]{
         }
 
 
+
+        function getBestScoreKey(eventKey, gender) {
+            const table = MASTER_DATA[eventKey][gender] || MASTER_DATA[eventKey].male;
+            const entries = Object.entries(table);
+            let best = entries[0];
+            entries.forEach(e => { if(Number(e[1]) > Number(best[1])) best = e; });
+            return best ? best[0] : '';
+        }
+        function sortScoreKeys(eventKey, table) {
+            const keys = Object.keys(table);
+            const allNumeric = keys.every(k => !isNaN(parseFloat(k)) && isFinite(k));
+            if(allNumeric) return keys.map(Number).sort((a,b) => MASTER_DATA[eventKey].isLowerBetter ? a-b : b-a).map(String);
+            const gradeOrder = ['A','B','C','D','E','F','G','H','I','실격'];
+            return keys.sort((a,b) => {
+                const ai = gradeOrder.indexOf(a), bi = gradeOrder.indexOf(b);
+                if(ai !== -1 || bi !== -1) return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+                return String(a).localeCompare(String(b), 'ko');
+            });
+        }
+
         // Render Score Table
         function renderTable() {
             const tabs = document.getElementById('table-tabs');
@@ -1691,11 +1736,11 @@ button[onclick="toggleAuthMode('signup')"]{
             `).join('');
             
             const table = MASTER_DATA[activeChartTab][tableGender];
-            const sortedKeys = Object.keys(table).map(Number).sort((a,b) => MASTER_DATA[activeChartTab].isLowerBetter ? a-b : b-a);
+            const sortedKeys = sortScoreKeys(activeChartTab, table);
             
-            // Update Summary Cards
-            const maleMax = Object.keys(MASTER_DATA[activeChartTab].male).map(Number).sort((a,b)=>MASTER_DATA[activeChartTab].isLowerBetter?a-b:b-a)[0];
-            const femaleMax = Object.keys(MASTER_DATA[activeChartTab].female).map(Number).sort((a,b)=>MASTER_DATA[activeChartTab].isLowerBetter?a-b:b-a)[0];
+            // Update Summary Cards - 학교별 배점은 100점 만점이 아닐 수 있어 최고점 기록을 기준으로 표시
+            const maleMax = getBestScoreKey(activeChartTab, 'male');
+            const femaleMax = getBestScoreKey(activeChartTab, 'female');
             
             document.getElementById('summary-male').innerText = maleMax + MASTER_DATA[activeChartTab].unit;
             document.getElementById('summary-female').innerText = femaleMax + MASTER_DATA[activeChartTab].unit;
@@ -1708,7 +1753,7 @@ button[onclick="toggleAuthMode('signup')"]{
             
             document.getElementById('table-body').innerHTML = sortedKeys.map(k => {
                 const score = table[k];
-                const isMax = score === 100;
+                const isMax = Number(score) === Math.max(...Object.values(table).map(Number));
                 return `
                 <tr class="transition-colors hover:bg-slate-50 ${isMax ? 'bg-indigo-50/50' : ''}">
                     <td class="p-3 font-bold text-slate-800 text-sm border-r border-slate-50">${k}</td>
@@ -2409,7 +2454,7 @@ async function renderAdminPage() {
 
         container.innerHTML = normalUsers.map((user) => `
         
-            <div class="bg-white rounded-[2rem] p-5 shadow-sm border border-slate-100 space-y-2" data-branch="${user.branch || '경주'}" data-name="${user.name || ''}">
+            <div class="bg-white rounded-[2rem] p-5 shadow-sm border border-slate-100 space-y-2" data-branch="${user.branch || '경주'}" data-role="${user.role || '학생'}" data-name="${user.name || ''}">
 
                 <div class="flex justify-between items-center">
                     <h3 class="font-black text-lg text-slate-900">
@@ -2427,6 +2472,11 @@ async function renderAdminPage() {
                     <div class="bg-slate-50 rounded-xl p-3">
                         <p class="text-slate-400 text-[10px] font-bold">지점</p>
                         <p class="font-bold">${user.branch || '경주'}</p>
+                    </div>
+
+                    <div class="bg-slate-50 rounded-xl p-3">
+                        <p class="text-slate-400 text-[10px] font-bold">구분</p>
+                        <p class="font-bold">${user.role || '학생'}</p>
                     </div>
 
                     <div class="bg-slate-50 rounded-xl p-3">
@@ -2518,27 +2568,41 @@ function ppcAllMeasureEvents(){
     return Object.keys(MASTER_DATA);
 }
 function ppcScoreInfo(k, val){
-    if(!k || !MASTER_DATA[k] || isNaN(val)) return {score:'-', perfect:'-', diff:'-', diffClass:''};
+    if(!k || !MASTER_DATA[k]) return {score:'-', perfect:'-', diff:'-', diffClass:''};
     const gender = (typeof currentUser !== 'undefined' && currentUser && currentUser.gender) || 'male';
     const table = MASTER_DATA[k][gender] || MASTER_DATA[k].male;
-    const keys = Object.keys(table).map(Number);
-    let score = 0;
+    const unit = MASTER_DATA[k].unit || '';
+    const entries = Object.entries(table);
+    const bestEntry = entries.reduce((best, cur) => Number(cur[1]) > Number(best[1]) ? cur : best, entries[0]);
+    if(val === undefined || val === null || val === '' || (typeof val === 'number' && isNaN(val))) {
+        return {score:'-', perfect: bestEntry ? bestEntry[0] + unit : '-', diff:'-', diffClass:''};
+    }
+    if(MASTER_DATA[k].isGradeTable){
+        const key = String(val).trim().toUpperCase();
+        const score = table[key] ?? '-';
+        const good = bestEntry && key === String(bestEntry[0]).toUpperCase();
+        return {score, perfect: bestEntry[0] + unit, diff: score === '-' ? '-' : `${Number(score) - Number(bestEntry[1])}점`, diffClass: good ? 'positive' : 'negative'};
+    }
+    val = parseFloat(val);
+    if(isNaN(val)) return {score:'-', perfect: bestEntry ? bestEntry[0] + unit : '-', diff:'-', diffClass:''};
+    const keys = entries.map(e => Number(e[0])).filter(n => !isNaN(n));
+    let score = '-';
     if(MASTER_DATA[k].isLowerBetter){
         const sorted = keys.sort((a,b)=>a-b);
-        if(val <= sorted[0]) score = table[sorted[0]];
-        else if(val > sorted[sorted.length-1]) score = 0;
-        else { for(const th of sorted){ if(val <= th){score = table[th]; break;} } }
+        if(val <= sorted[0]) score = table[String(sorted[0])] ?? table[sorted[0]];
+        else if(val > sorted[sorted.length-1]) score = table[String(sorted[sorted.length-1])] ?? table[sorted[sorted.length-1]];
+        else { for(const th of sorted){ if(val <= th){score = table[String(th)] ?? table[th]; break;} } }
     }else{
         const sorted = keys.sort((a,b)=>b-a);
-        if(val >= sorted[0]) score = table[sorted[0]];
-        else if(val < sorted[sorted.length-1]) score = 0;
-        else { for(const th of sorted){ if(val >= th){score = table[th]; break;} } }
+        if(val >= sorted[0]) score = table[String(sorted[0])] ?? table[sorted[0]];
+        else if(val < sorted[sorted.length-1]) score = table[String(sorted[sorted.length-1])] ?? table[sorted[sorted.length-1]];
+        else { for(const th of sorted){ if(val >= th){score = table[String(th)] ?? table[th]; break;} } }
     }
-    const perfect = Number(Object.keys(table).find(key => table[key] === 100));
+    const perfect = Number(bestEntry[0]);
     let diff = Math.round((val - perfect) * 100) / 100;
     const sign = diff > 0 ? '+' : '';
     const good = MASTER_DATA[k].isLowerBetter ? diff <= 0 : diff >= 0;
-    return {score, perfect: perfect + MASTER_DATA[k].unit, diff:`${sign}${diff}${MASTER_DATA[k].unit}`, diffClass: good ? 'positive' : 'negative'};
+    return {score, perfect: bestEntry[0] + unit, diff:`${sign}${diff}${unit}`, diffClass: good ? 'positive' : 'negative'};
 }
 function renderInputs(){
     const select = document.getElementById('measure-event-select');
@@ -2552,9 +2616,13 @@ function renderInputs(){
     const k = select.value || events[0] || '';
     if(k && select.value !== k) select.value = k;
     const unit = k && MASTER_DATA[k] ? MASTER_DATA[k].unit : '';
+    const inputType = MASTER_DATA[k]?.isGradeTable ? 'text' : 'number';
+    const inputStep = MASTER_DATA[k]?.isGradeTable ? '' : 'step="0.01"';
+    const ph1 = MASTER_DATA[k]?.isGradeTable ? '1차 등급(A~I)' : '1차 기록';
+    const ph2 = MASTER_DATA[k]?.isGradeTable ? '2차 등급(A~I)' : '2차 기록';
     basic.innerHTML = k ? `
-        <div class="measure-input-box"><input type="number" step="0.01" id="input-${k}" oninput="calcSingle('${k}')" placeholder="1차 기록"><span>${unit}</span></div>
-        <div class="measure-input-box"><input type="number" step="0.01" id="input-${k}-2" oninput="calcSingle('${k}')" placeholder="2차 기록"><span>${unit}</span></div>
+        <div class="measure-input-box"><input type="${inputType}" ${inputStep} id="input-${k}" oninput="calcSingle('${k}')" placeholder="${ph1}"><span>${unit}</span></div>
+        <div class="measure-input-box"><input type="${inputType}" ${inputStep} id="input-${k}-2" oninput="calcSingle('${k}')" placeholder="${ph2}"><span>${unit}</span></div>
     ` : '';
     if(extra) extra.innerHTML = '';
     calcSingle(k);
@@ -2562,12 +2630,18 @@ function renderInputs(){
 }
 function calcSingle(k){
     const selected = document.getElementById('measure-event-select')?.value || k;
-    const a = parseFloat(document.getElementById('input-'+selected)?.value);
-    const b = parseFloat(document.getElementById('input-'+selected+'-2')?.value);
+    const rawA = document.getElementById('input-'+selected)?.value;
+    const rawB = document.getElementById('input-'+selected+'-2')?.value;
     let val = NaN;
-    if(!isNaN(a) && !isNaN(b)) val = MASTER_DATA[selected].isLowerBetter ? Math.min(a,b) : Math.max(a,b);
-    else if(!isNaN(a)) val = a;
-    else if(!isNaN(b)) val = b;
+    if(MASTER_DATA[selected]?.isGradeTable){
+        val = (rawA || rawB || '').trim().toUpperCase();
+    }else{
+        const a = parseFloat(rawA);
+        const b = parseFloat(rawB);
+        if(!isNaN(a) && !isNaN(b)) val = MASTER_DATA[selected].isLowerBetter ? Math.min(a,b) : Math.max(a,b);
+        else if(!isNaN(a)) val = a;
+        else if(!isNaN(b)) val = b;
+    }
     const info = ppcScoreInfo(selected, val);
     const scoreEl=document.getElementById('measure-score-live'), perfectEl=document.getElementById('measure-perfect-live'), diffEl=document.getElementById('measure-diff-live');
     if(scoreEl) scoreEl.innerHTML = `${info.score}<small>점</small>`;
@@ -2579,10 +2653,18 @@ async function saveRecords(){
     const k = document.getElementById('measure-event-select')?.value;
     if(!dateStr) return showToast('날짜를 선택해주세요.', 'error');
     if(!k) return showToast('종목을 선택해주세요.', 'error');
-    const a = parseFloat(document.getElementById('input-'+k)?.value);
-    const b = parseFloat(document.getElementById('input-'+k+'-2')?.value);
-    if(isNaN(a) && isNaN(b)) return showToast('저장할 기록을 입력해주세요.', 'error');
-    let val = !isNaN(a) && !isNaN(b) ? (MASTER_DATA[k].isLowerBetter ? Math.min(a,b) : Math.max(a,b)) : (!isNaN(a) ? a : b);
+    const rawA = document.getElementById('input-'+k)?.value;
+    const rawB = document.getElementById('input-'+k+'-2')?.value;
+    let val;
+    if(MASTER_DATA[k]?.isGradeTable){
+        val = (rawA || rawB || '').trim().toUpperCase();
+        if(!val) return showToast('저장할 등급을 입력해주세요.', 'error');
+    }else{
+        const a = parseFloat(rawA);
+        const b = parseFloat(rawB);
+        if(isNaN(a) && isNaN(b)) return showToast('저장할 기록을 입력해주세요.', 'error');
+        val = !isNaN(a) && !isNaN(b) ? (MASTER_DATA[k].isLowerBetter ? Math.min(a,b) : Math.max(a,b)) : (!isNaN(a) ? a : b);
+    }
     const values = {[k]: val};
     if(!currentUser.records) currentUser.records = [];
     const existingIndex = currentUser.records.findIndex(r => r.date === dateStr);
@@ -3717,16 +3799,26 @@ async function openAdminBestByDocId(docId){
         <label class="text-[10px] font-black text-slate-400 ml-2">이름</label>
         <input id="admin-edit-name" class="form-input" type="text" placeholder="이름">
       </div>
-      <div>
-        <label class="text-[10px] font-black text-slate-400 ml-2">지점</label>
-        <select id="admin-edit-branch" class="form-input">
-          <option value="경주">경주</option>
-          <option value="분당">분당</option>
-          <option value="수지">수지</option>
-          <option value="강동">강동</option>
-          <option value="강북">강북</option>
-          <option value="구리">구리</option>
-        </select>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="text-[10px] font-black text-slate-400 ml-2">지점</label>
+          <select id="admin-edit-branch" class="form-input">
+            <option value="경주">경주</option>
+            <option value="분당">분당</option>
+            <option value="수지">수지</option>
+            <option value="강동">강동</option>
+            <option value="강북">강북</option>
+            <option value="구리">구리</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-[10px] font-black text-slate-400 ml-2">구분</label>
+          <select id="admin-edit-role" class="form-input">
+            <option value="학생">학생</option>
+            <option value="강사">강사</option>
+            <option value="대표">대표</option>
+          </select>
+        </div>
       </div>
       <div class="grid grid-cols-2 gap-3">
         <div>
@@ -3829,6 +3921,7 @@ async function openAdminBestByDocId(docId){
     document.getElementById('admin-edit-docid').value = user.docId || docId || user.id || '';
     document.getElementById('admin-edit-name').value = user.name || '';
     document.getElementById('admin-edit-branch').value = user.branch || '경주';
+    document.getElementById('admin-edit-role').value = user.role || '학생';
     document.getElementById('admin-edit-school').value = user.school || '';
     document.getElementById('admin-edit-grade').value = user.grade || '';
     document.getElementById('admin-edit-type').value = user.type || '';
@@ -3851,6 +3944,7 @@ async function openAdminBestByDocId(docId){
     const updated = {
       name: document.getElementById('admin-edit-name').value.trim(),
       branch: document.getElementById('admin-edit-branch').value || '경주',
+      role: document.getElementById('admin-edit-role').value || '학생',
       school: document.getElementById('admin-edit-school').value.trim(),
       grade: document.getElementById('admin-edit-grade').value,
       type: document.getElementById('admin-edit-type').value,
@@ -3904,5 +3998,22 @@ async function openAdminBestByDocId(docId){
 })();
 </script>
 
+
+<script id="ppc-role-default-final-patch">
+(function(){
+  function applyRoleDefaults(){
+    try{
+      if(typeof users !== 'undefined' && Array.isArray(users)){
+        users.forEach(u => { if(u && !u.role) u.role = '학생'; });
+      }
+    }catch(e){}
+    document.querySelectorAll('#admin-user-list > *').forEach(card => {
+      if(!card.dataset.role) card.dataset.role = '학생';
+    });
+  }
+  document.addEventListener('DOMContentLoaded', applyRoleDefaults);
+  setInterval(applyRoleDefaults, 1000);
+})();
+</script>
 </body>
 </html>
