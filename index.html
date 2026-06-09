@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>PPC 실기 관리 시스템</title>
+    <title>경주PPC 실기 관리 시스템</title>
     <!-- 용량 최적화: 수시실기 이미지는 images/practical 폴더에서 불러옵니다. -->
     
     <!-- External Libraries -->
@@ -4015,5 +4015,126 @@ async function openAdminBestByDocId(docId){
   setInterval(applyRoleDefaults, 1000);
 })();
 </script>
+
+
+<script id="ppc-role-conditional-fields-patch">
+(function(){
+  function byId(id){ return document.getElementById(id); }
+  function setHidden(el, hidden){
+    if(!el) return;
+    el.style.display = hidden ? 'none' : '';
+  }
+  function setDisabled(id, disabled){
+    const el = byId(id);
+    if(!el) return;
+    el.disabled = !!disabled;
+    if(disabled) el.value = '';
+  }
+  function fieldWrap(el){
+    if(!el) return null;
+    // label+input 구조는 부모 div를 숨기고, 단독 input/select는 자기 자신을 숨김
+    if(el.parentElement && el.parentElement.tagName === 'DIV') return el.parentElement;
+    return el;
+  }
+
+  window.ppcApplyRoleConditionalFields = function(scope){
+    if(scope === 'admin'){
+      const role = (byId('admin-edit-role') && byId('admin-edit-role').value) || '학생';
+      const isStudent = role === '학생';
+      setHidden(fieldWrap(byId('admin-edit-grade')), !isStudent);
+      setHidden(fieldWrap(byId('admin-edit-type')), !isStudent);
+      setHidden(fieldWrap(byId('admin-edit-college')), !isStudent);
+      setDisabled('admin-edit-grade', !isStudent);
+      setDisabled('admin-edit-type', !isStudent);
+      setDisabled('admin-edit-college', !isStudent);
+      return;
+    }
+
+    const role = (byId('reg-role') && byId('reg-role').value) || '학생';
+    const isStudent = role === '학생';
+    setHidden(byId('reg-grade'), !isStudent);
+    setHidden(byId('reg-type'), !isStudent);
+    setHidden(byId('reg-college'), !isStudent);
+    setDisabled('reg-grade', !isStudent);
+    setDisabled('reg-type', !isStudent);
+    setDisabled('reg-college', !isStudent);
+
+    if(isStudent){
+      if(byId('reg-grade')) byId('reg-grade').setAttribute('required','required');
+      if(byId('reg-type')) byId('reg-type').setAttribute('required','required');
+      if(byId('reg-college')) byId('reg-college').removeAttribute('required');
+    }else{
+      ['reg-grade','reg-type','reg-college'].forEach(id=>{ const el=byId(id); if(el) el.removeAttribute('required'); });
+    }
+  };
+
+  function bind(){
+    const regRole = byId('reg-role');
+    if(regRole && !regRole.dataset.conditionalBound){
+      regRole.dataset.conditionalBound = '1';
+      regRole.addEventListener('change', function(){ window.ppcApplyRoleConditionalFields('signup'); });
+      window.ppcApplyRoleConditionalFields('signup');
+    }
+
+    const adminRole = byId('admin-edit-role');
+    if(adminRole && !adminRole.dataset.conditionalBound){
+      adminRole.dataset.conditionalBound = '1';
+      adminRole.addEventListener('change', function(){ window.ppcApplyRoleConditionalFields('admin'); });
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', bind);
+  setTimeout(bind, 300);
+
+  // 회원가입 저장 직전: 강사/대표는 학년·전형·목표대학 값을 비움
+  const signupTimer = setInterval(function(){
+    if(typeof window.handleSignup === 'function' && !window.handleSignup.__ppcRoleConditionalPatched){
+      const original = window.handleSignup;
+      window.handleSignup = async function(){
+        window.ppcApplyRoleConditionalFields('signup');
+        const role = (byId('reg-role') && byId('reg-role').value) || '학생';
+        if(role !== '학생'){
+          ['reg-grade','reg-type','reg-college'].forEach(id=>{ const el=byId(id); if(el) el.value=''; });
+        }
+        return original.apply(this, arguments);
+      };
+      window.handleSignup.__ppcRoleConditionalPatched = true;
+      clearInterval(signupTimer);
+    }
+  }, 150);
+
+  // 관리자 수정창 열릴 때: 역할에 따라 입력칸 표시/숨김
+  const adminOpenTimer = setInterval(function(){
+    if(typeof window.openAdminEditUserModal === 'function' && !window.openAdminEditUserModal.__ppcRoleConditionalPatched){
+      const originalOpen = window.openAdminEditUserModal;
+      window.openAdminEditUserModal = async function(){
+        const result = await originalOpen.apply(this, arguments);
+        setTimeout(function(){ window.ppcApplyRoleConditionalFields('admin'); }, 0);
+        return result;
+      };
+      window.openAdminEditUserModal.__ppcRoleConditionalPatched = true;
+      clearInterval(adminOpenTimer);
+    }
+  }, 150);
+
+  // 관리자 저장 직전: 강사/대표는 학년·전형·목표대학 값을 비움
+  const adminSaveTimer = setInterval(function(){
+    if(typeof window.saveAdminEditUser === 'function' && !window.saveAdminEditUser.__ppcRoleConditionalPatched){
+      const originalSave = window.saveAdminEditUser;
+      window.saveAdminEditUser = async function(){
+        window.ppcApplyRoleConditionalFields('admin');
+        const role = (byId('admin-edit-role') && byId('admin-edit-role').value) || '학생';
+        if(role !== '학생'){
+          ['admin-edit-grade','admin-edit-type','admin-edit-college'].forEach(id=>{ const el=byId(id); if(el) el.value=''; });
+        }
+        return originalSave.apply(this, arguments);
+      };
+      window.saveAdminEditUser.__ppcRoleConditionalPatched = true;
+      clearInterval(adminSaveTimer);
+    }
+  }, 150);
+})();
+</script>
+
 </body>
 </html>
