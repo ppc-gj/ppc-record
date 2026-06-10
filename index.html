@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>PPC 실기 관리 시스템</title>
+    <title>경주PPC 실기 관리 시스템</title>
     <!-- 용량 최적화: 수시실기 이미지는 images/practical 폴더에서 불러옵니다. -->
     
     <!-- External Libraries -->
@@ -301,6 +301,51 @@ button[onclick="toggleAuthMode('signup')"]{
 }
 </style>
 
+
+<style id="ppc-admin-compact-list-style">
+/* 관리자 회원관리 compact list */
+#admin-user-list.ppc-admin-compact-list{display:flex;flex-direction:column;gap:.5rem;}
+.ppc-admin-list-header,.ppc-admin-list-row{
+  display:grid;
+  grid-template-columns:1.05fr .62fr .72fr 1fr .55fr 1.25fr;
+  gap:.35rem;
+  align-items:center;
+}
+.ppc-admin-list-header{
+  position:sticky;top:0;z-index:5;
+  background:#f8fafc;
+  border:1px solid #e2e8f0;
+  border-radius:1rem;
+  padding:.65rem .55rem;
+  font-size:.68rem;font-weight:1000;color:#64748b;
+}
+.ppc-admin-list-row{
+  background:#fff;
+  border:1px solid #e2e8f0;
+  border-radius:1rem;
+  padding:.65rem .55rem;
+  box-shadow:0 4px 12px rgba(15,23,42,.04);
+}
+.ppc-admin-list-cell{min-width:0;font-size:.73rem;font-weight:900;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ppc-admin-list-name{font-size:.8rem;font-weight:1000;color:#0f172a;}
+.ppc-admin-list-branch{display:inline-flex;align-items:center;justify-content:center;min-width:38px;border-radius:999px;padding:.24rem .4rem;background:#f1f5f9;color:#334155;font-size:.64rem;font-weight:1000;}
+.ppc-admin-list-role{display:inline-flex;align-items:center;justify-content:center;min-width:42px;border-radius:999px;padding:.25rem .45rem;background:#eff6ff;color:#1d4ed8;font-size:.66rem;font-weight:1000;}
+.ppc-admin-list-role.role-student{background:#eff6ff;color:#1d4ed8;}
+.ppc-admin-list-role.role-teacher{background:#fef9c3;color:#a16207;}
+.ppc-admin-list-role.role-owner{background:#fee2e2;color:#dc2626;}
+.ppc-admin-list-actions{display:flex;gap:.25rem;justify-content:flex-end;}
+.ppc-admin-list-actions button{border:0;border-radius:.7rem;padding:.45rem .45rem;font-size:.66rem;font-weight:1000;white-space:nowrap;}
+.ppc-admin-edit-btn{background:#0f172a;color:#fff;}
+.ppc-admin-best-btn{background:#1d4ed8;color:#fff;}
+@media(max-width:390px){
+  .ppc-admin-list-header,.ppc-admin-list-row{grid-template-columns:.92fr .52fr .58fr .82fr .38fr 1.02fr;gap:.18rem;padding:.6rem .42rem;}
+  .ppc-admin-list-cell{font-size:.66rem;}
+  .ppc-admin-list-name{font-size:.72rem;}
+  .ppc-admin-list-branch{min-width:30px;font-size:.56rem;padding:.2rem .28rem;}
+  .ppc-admin-list-role{min-width:34px;font-size:.6rem;padding:.22rem .35rem;}
+  .ppc-admin-list-actions button{font-size:.58rem;padding:.42rem .32rem;border-radius:.55rem;}
+}
+</style>
 </head>
 <body class="max-w-md mx-auto min-h-screen shadow-2xl relative bg-slate-50 overflow-x-hidden">
 
@@ -2440,6 +2485,7 @@ function sortUsersByKoreanName(list) {
 async function renderAdminPage() {
 
     const container = document.getElementById('admin-user-list');
+    container.className = 'ppc-admin-compact-list';
     container.innerHTML = `
         <div class="bg-white rounded-2xl p-6 text-center font-bold text-slate-400">
             회원 목록을 불러오는 중입니다...
@@ -2466,6 +2512,7 @@ async function renderAdminPage() {
         }
 
         if(normalUsers.length === 0) {
+            container.className = 'space-y-3';
             container.innerHTML = `
                 <div class="bg-white rounded-2xl p-6 text-center font-bold text-slate-400">
                     ${searchText ? '검색된 회원이 없습니다.' : '가입한 회원이 없습니다.'}
@@ -2474,85 +2521,45 @@ async function renderAdminPage() {
             return;
         }
 
-        container.innerHTML = normalUsers.map((user) => `
-        
-            <div class="bg-white rounded-[2rem] p-5 shadow-sm border border-slate-100 space-y-2" data-branch="${user.branch || '경주'}" data-role="${user.role || '학생'}" data-name="${user.name || ''}">
-
-                <div class="flex justify-between items-center">
-                    <h3 class="font-black text-lg text-slate-900">
-                        ${user.name || '-'}
-                    </h3>
-
-                    <button onclick="deleteUser('${user.docId}')"
-                        class="bg-rose-500 hover:bg-rose-600 text-white px-4 py-2 rounded-xl text-xs font-black">
-                        회원 탈퇴
-                    </button>
-                </div>
-
-                <div class="grid grid-cols-2 gap-2 text-sm">
-
-                    <div class="bg-slate-50 rounded-xl p-3">
-                        <p class="text-slate-400 text-[10px] font-bold">지점</p>
-                        <p class="font-bold">${user.branch || '경주'}</p>
-                    </div>
-
-                    <div class="bg-slate-50 rounded-xl p-3">
-                        <p class="text-slate-400 text-[10px] font-bold">구분</p>
-                        <p class="font-bold">${user.role || '학생'}</p>
-                    </div>
-
-                    <div class="bg-slate-50 rounded-xl p-3">
-                        <p class="text-slate-400 text-[10px] font-bold">학교</p>
-                        <p class="font-bold">${user.school || '-'}</p>
-                    </div>
-
-                    <div class="bg-slate-50 rounded-xl p-3">
-                        <p class="text-slate-400 text-[10px] font-bold">학년</p>
-                        <p class="font-bold">${user.grade || '-'}</p>
-                    </div>
-
-                    <div class="bg-slate-50 rounded-xl p-3">
-                        <p class="text-slate-400 text-[10px] font-bold">전형</p>
-                        <p class="font-bold">${user.type || '-'}</p>
-                    </div>
-
-                    <div class="bg-slate-50 rounded-xl p-3">
-                        <p class="text-slate-400 text-[10px] font-bold">핸드폰</p>
-                        <p class="font-bold">${user.phone || '-'}</p>
-                    </div>
-
-                    <div class="bg-slate-50 rounded-xl p-3">
-                        <p class="text-slate-400 text-[10px] font-bold">목표대학</p>
-                        <p class="font-bold">${user.college || '-'}</p>
-                    </div>
-
-                    <div class="bg-slate-50 rounded-xl p-3">
-                        <p class="text-slate-400 text-[10px] font-bold">아이디</p>
-                        <p class="font-bold">${user.id || '-'}</p>
-                    </div>
-
-                    <div class="bg-slate-50 rounded-xl p-3 col-span-2">
-                        <p class="text-slate-400 text-[10px] font-bold">비밀번호</p>
-                        <p class="font-bold">${user.pw || '-'}</p>
-                    </div>
-
-                </div>
-
-                <button onclick="openAdminEditUserModal('${user.docId}')"
-                    class="w-full mt-3 bg-slate-900 hover:bg-slate-800 text-white py-3 rounded-2xl text-xs font-black shadow active:scale-[0.98]">
-                    회원정보 수정
-                </button>
-
-                <button onclick="openAdminBestByDocId('${user.docId}')"
-                    class="w-full mt-3 bg-blue-700 hover:bg-blue-800 text-white py-3 rounded-2xl text-xs font-black shadow active:scale-[0.98]">
-                    BEST 기록 보기
-                </button>
+        const header = `
+            <div class="ppc-admin-list-header" data-admin-header="1">
+                <div>이름</div>
+                <div>지점</div>
+                <div>구분</div>
+                <div>학교</div>
+                <div>학년</div>
+                <div class="text-right">관리</div>
             </div>
+        `;
 
-        `).join('');
+        const rows = normalUsers.map((user) => {
+            const docId = String(user.docId || '').replace(/'/g, "\\'");
+            const name = escapeHtml(user.name || '-');
+            const role = escapeHtml(user.role || '학생');
+            const school = escapeHtml(user.school || '-');
+            const grade = escapeHtml(user.grade || '-');
+            const branch = escapeHtml(user.branch || '경주');
+            const roleClass = (user.role === '대표') ? 'role-owner' : (user.role === '강사') ? 'role-teacher' : 'role-student';
+            return `
+                <div class="ppc-admin-list-row" data-branch="${branch}" data-role="${role}" data-name="${name}">
+                    <div class="ppc-admin-list-cell ppc-admin-list-name" title="${name}">${name}</div>
+                    <div class="ppc-admin-list-cell"><span class="ppc-admin-list-branch">${branch}</span></div>
+                    <div class="ppc-admin-list-cell"><span class="ppc-admin-list-role ${roleClass}">${role}</span></div>
+                    <div class="ppc-admin-list-cell" title="${school}">${school}</div>
+                    <div class="ppc-admin-list-cell">${grade}</div>
+                    <div class="ppc-admin-list-actions">
+                        <button type="button" onclick="openAdminEditUserModal('${docId}')" class="ppc-admin-edit-btn">수정</button>
+                        <button type="button" onclick="openAdminBestByDocId('${docId}')" class="ppc-admin-best-btn">BEST</button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        container.innerHTML = header + rows;
         if(typeof applyAdminBranchFilter === 'function') setTimeout(applyAdminBranchFilter, 0);
     } catch (error) {
         console.error(error);
+        container.className = 'space-y-3';
         container.innerHTML = `
             <div class="bg-white rounded-2xl p-6 text-center font-bold text-rose-500">
                 회원 목록을 불러오지 못했습니다. Firebase 설정을 확인해주세요.
@@ -3660,6 +3667,7 @@ async function openAdminBestByDocId(docId){
     lists.forEach(list => {
       Array.from(list.children).forEach(card => {
         if(card.nodeType !== 1) return;
+        if(card.dataset && card.dataset.adminHeader === '1') { card.style.display = ''; return; }
         const branch = getUserBranchFromCard(card);
         card.style.display = (selected === '전체' || branch === selected) ? '' : 'none';
       });
