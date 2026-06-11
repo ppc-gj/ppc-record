@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>PPC 실기 관리 시스템</title>
+    <title>PPC 실기관리 시스템</title>
     <!-- 용량 최적화: 수시실기 이미지는 images/practical 폴더에서 불러옵니다. -->
     
     <!-- External Libraries -->
@@ -2856,7 +2856,13 @@ function renderMeasureHomeLists(){
         const n=document.getElementById('measure-user-name');
         if(n) n.textContent=currentUser.name||'사용자';
         const av=document.getElementById('measure-avatar');
-        if(av) av.textContent=(currentUser.name||'P').trim().charAt(0);
+        if(av){
+            av.textContent=(currentUser.branch||'경주').trim() || '경주';
+            av.style.fontSize='13px';
+            av.style.fontWeight='1000';
+            av.style.letterSpacing='-0.08em';
+            av.style.color='#1d4ed8';
+        }
         const pd=document.getElementById('profile-display-name'); if(pd) pd.innerText=currentUser.name||'이름';
         const pid=document.getElementById('profile-user-id'); if(pid) pid.innerText=`ID: ${currentUser.id||'-'}`;
         ['name','school','grade','type','gender','college','pw','phone'].forEach(k => {
