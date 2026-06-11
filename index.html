@@ -3,12 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>PPC 실기 관리 시스템</title>
+    <title>경주PPC 실기 관리 시스템</title>
     <!-- 용량 최적화: 수시실기 이미지는 images/practical 폴더에서 불러옵니다. -->
     
     <!-- External Libraries -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
     
     <!-- Custom Styles -->
@@ -353,6 +354,21 @@ button[onclick="toggleAuthMode('signup')"]{
 }
 </style>
 
+
+<style id="ppc-admin-stats-excel-style">
+/* 관리자 지점통계 + 엑셀 다운로드 */
+#admin-branch-stats-list{display:flex;flex-direction:column;gap:.75rem;}
+.ppc-admin-stat-summary{background:linear-gradient(135deg,#0f172a,#1d4ed8);color:#fff;border-radius:1.5rem;padding:1.1rem;box-shadow:0 12px 28px rgba(29,78,216,.20);}
+.ppc-admin-stat-summary p{font-size:.68rem;font-weight:900;color:#bfdbfe;margin-bottom:.25rem;}
+.ppc-admin-stat-summary strong{font-size:2rem;font-weight:1000;letter-spacing:-.04em;}
+.ppc-admin-stat-card{background:#fff;border:1px solid #dbeafe;border-radius:1.25rem;padding:1rem;box-shadow:0 6px 18px rgba(15,23,42,.05);}
+.ppc-admin-stat-row{display:flex;align-items:center;justify-content:space-between;gap:.75rem;}
+.ppc-admin-stat-branch{font-size:1rem;font-weight:1000;color:#0f172a;}
+.ppc-admin-stat-count{font-size:1.35rem;font-weight:1000;color:#1d4ed8;}
+.ppc-admin-stat-bar{height:8px;background:#eff6ff;border-radius:999px;overflow:hidden;margin-top:.75rem;}
+.ppc-admin-stat-bar span{display:block;height:100%;background:#1d4ed8;border-radius:999px;}
+.ppc-admin-excel-btn{width:100%;height:44px;border:0;border-radius:14px;background:#16a34a;color:#fff;font-size:.8rem;font-weight:1000;box-shadow:0 8px 18px rgba(22,163,74,.18);}
+</style>
 </head>
 <body class="max-w-md mx-auto min-h-screen shadow-2xl relative bg-slate-50 overflow-x-hidden">
 
@@ -778,10 +794,11 @@ button[onclick="toggleAuthMode('signup')"]{
         </button>
     </div>
 
-    <div class="bg-slate-200/70 p-1 rounded-2xl grid grid-cols-3 gap-1">
+    <div class="bg-slate-200/70 p-1 rounded-2xl grid grid-cols-4 gap-1">
         <button id="admin-tab-users" onclick="showAdminTab('users')" class="admin-tab-btn bg-white text-indigo-600 shadow px-3 py-3 rounded-xl text-xs font-black">회원관리</button>
         <button id="admin-tab-logs" onclick="showAdminTab('logs')" class="admin-tab-btn text-slate-500 px-3 py-3 rounded-xl text-xs font-black">로그인기록</button>
         <button id="admin-tab-inactive" onclick="showAdminTab('inactive')" class="admin-tab-btn text-slate-500 px-3 py-3 rounded-xl text-xs font-black">미접속학생</button>
+        <button id="admin-tab-stats" onclick="showAdminTab('stats')" class="admin-tab-btn text-slate-500 px-3 py-3 rounded-xl text-xs font-black">지점통계</button>
     </div>
 
 
@@ -805,11 +822,13 @@ button[onclick="toggleAuthMode('signup')"]{
             <button onclick="clearAdminUserSearch()" class="shrink-0 bg-slate-100 text-slate-600 px-4 rounded-xl text-xs font-black">초기화</button>
         </div>
         <p id="admin-user-search-count" class="text-[10px] font-bold text-slate-400 mt-2"></p>
+        <button onclick="downloadAdminUsersExcel()" class="ppc-admin-excel-btn mt-3">엑셀 다운로드</button>
     </div>
 
     <div id="admin-user-list" class="space-y-3"></div>
     <div id="admin-login-log-list" class="space-y-3 hidden"></div>
     <div id="admin-inactive-list" class="space-y-3 hidden"></div>
+    <div id="admin-branch-stats-list" class="hidden"></div>
 
 </section>
 
@@ -2028,12 +2047,14 @@ function showAdminTab(tab) {
     const usersBox = document.getElementById('admin-user-list');
     const logsBox = document.getElementById('admin-login-log-list');
     const inactiveBox = document.getElementById('admin-inactive-list');
+    const statsBox = document.getElementById('admin-branch-stats-list');
     const usersBtn = document.getElementById('admin-tab-users');
     const logsBtn = document.getElementById('admin-tab-logs');
     const inactiveBtn = document.getElementById('admin-tab-inactive');
+    const statsBtn = document.getElementById('admin-tab-stats');
 
-    [usersBox, logsBox, inactiveBox].forEach(box => box && box.classList.add('hidden'));
-    [usersBtn, logsBtn, inactiveBtn].forEach(btn => {
+    [usersBox, logsBox, inactiveBox, statsBox].forEach(box => box && box.classList.add('hidden'));
+    [usersBtn, logsBtn, inactiveBtn, statsBtn].forEach(btn => {
         if(btn) btn.className = 'admin-tab-btn text-slate-500 px-3 py-3 rounded-xl text-xs font-black';
     });
 
@@ -2045,6 +2066,10 @@ function showAdminTab(tab) {
         inactiveBox.classList.remove('hidden');
         inactiveBtn.className = 'admin-tab-btn bg-white text-indigo-600 shadow px-3 py-3 rounded-xl text-xs font-black';
         renderInactiveStudentsPage();
+    } else if(tab === 'stats') {
+        statsBox.classList.remove('hidden');
+        statsBtn.className = 'admin-tab-btn bg-white text-indigo-600 shadow px-3 py-3 rounded-xl text-xs font-black';
+        renderAdminBranchStats();
     } else {
         usersBox.classList.remove('hidden');
         usersBtn.className = 'admin-tab-btn bg-white text-indigo-600 shadow px-3 py-3 rounded-xl text-xs font-black';
@@ -2572,6 +2597,94 @@ async function renderAdminPage() {
                 회원 목록을 불러오지 못했습니다. Firebase 설정을 확인해주세요.
             </div>
         `;
+    }
+}
+
+
+function getAdminFilteredUsersForExport() {
+    const searchText = (adminUserSearchText || '').trim().toLowerCase();
+    const selectedBranch = (window.adminBranchFilter || '전체');
+    let list = (Array.isArray(users) ? users : []).filter(u => u && u.id !== 'ppc');
+    if(searchText) list = list.filter(u => String(u.name || '').toLowerCase().includes(searchText));
+    if(selectedBranch !== '전체') list = list.filter(u => (u.branch || '경주') === selectedBranch);
+    return sortUsersByKoreanName(list);
+}
+
+async function renderAdminBranchStats() {
+    const box = document.getElementById('admin-branch-stats-list');
+    if(!box) return;
+    box.innerHTML = `<div class="bg-white rounded-2xl p-6 text-center font-bold text-slate-400">지점 통계를 불러오는 중입니다...</div>`;
+    try {
+        await loadUsersFromFirestore();
+        const branches = ['경주','분당','수지','강동','강북','구리'];
+        const normalUsers = (Array.isArray(users) ? users : []).filter(u => u && u.id !== 'ppc');
+        const total = normalUsers.length;
+        const counts = branches.map(branch => ({
+            branch,
+            count: normalUsers.filter(u => (u.branch || '경주') === branch).length
+        }));
+        const max = Math.max(1, ...counts.map(x => x.count));
+        box.innerHTML = `
+            <div class="ppc-admin-stat-summary">
+                <p>전체 회원 수</p>
+                <strong>${total}</strong><span class="text-sm font-black ml-1">명</span>
+            </div>
+            ${counts.map(item => `
+                <div class="ppc-admin-stat-card">
+                    <div class="ppc-admin-stat-row">
+                        <div class="ppc-admin-stat-branch">${item.branch}</div>
+                        <div class="ppc-admin-stat-count">${item.count}<span class="text-xs text-slate-400 ml-1">명</span></div>
+                    </div>
+                    <div class="ppc-admin-stat-bar"><span style="width:${Math.round(item.count / max * 100)}%"></span></div>
+                </div>
+            `).join('')}
+        `;
+    } catch(error) {
+        console.error(error);
+        box.innerHTML = `<div class="bg-white rounded-2xl p-6 text-center font-bold text-rose-500">지점 통계를 불러오지 못했습니다.</div>`;
+    }
+}
+
+function downloadAdminUsersExcel() {
+    try {
+        const list = getAdminFilteredUsersForExport();
+        if(!list.length) {
+            showToast('다운로드할 회원이 없습니다.', 'error');
+            return;
+        }
+        const headers = ['이름','지점','구분','학교','학년','핸드폰번호','목표대학','아이디','비밀번호'];
+        const rows = list.map(u => [
+            u.name || '',
+            u.branch || '경주',
+            u.role || '학생',
+            u.school || '',
+            u.grade || '',
+            u.phone || '',
+            u.college || '',
+            u.id || '',
+            u.pw || ''
+        ]);
+        const tableRows = [headers, ...rows].map(row => '<tr>' + row.map(cell => `<td>${escapeHtml(cell)}</td>`).join('') + '</tr>').join('');
+        const html = `
+            <html><head><meta charset="UTF-8"></head><body>
+            <table border="1">${tableRows}</table>
+            </body></html>
+        `;
+        const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        const today = getAdminTodayKey ? getAdminTodayKey() : new Date().toISOString().slice(0,10);
+        const branch = (window.adminBranchFilter || '전체');
+        a.href = url;
+        a.download = `PPC_회원관리_${branch}_${today}.xls`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showToast('엑셀 다운로드 완료', 'success');
+    } catch(error) {
+        console.error(error);
+        showToast('엑셀 다운로드 실패', 'error');
     }
 }
 
@@ -4260,6 +4373,100 @@ async function openAdminBestByDocId(docId){
       clearInterval(adminSaveTimer);
     }
   }, 150);
+})();
+</script>
+
+
+<script id="ppc-real-xlsx-download-final">
+(function(){
+  function safeText(value){ return value == null ? '' : String(value); }
+  function getTodayKey(){
+    try {
+      if(typeof window.getAdminTodayKey === 'function') return window.getAdminTodayKey();
+    } catch(e) {}
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  }
+  function getExportUsers(){
+    let list = [];
+    try {
+      if(typeof window.getAdminFilteredUsersForExport === 'function') {
+        list = window.getAdminFilteredUsersForExport();
+      }
+    } catch(e) {}
+    if(!Array.isArray(list) || !list.length){
+      const all = Array.isArray(window.users) ? window.users : [];
+      const branch = window.adminBranchFilter || '전체';
+      const searchText = (window.adminUserSearchText || '').trim().toLowerCase();
+      list = all.filter(u => u && u.id !== 'ppc');
+      if(branch !== '전체') list = list.filter(u => (u.branch || '경주') === branch);
+      if(searchText) list = list.filter(u => safeText(u.name).toLowerCase().includes(searchText));
+    }
+    return list;
+  }
+  function makeRows(list){
+    return list.map(u => ({
+      '이름': safeText(u.name),
+      '지점': safeText(u.branch || '경주'),
+      '구분': safeText(u.role || u.type || '학생'),
+      '학교': safeText(u.school),
+      '학년': safeText(u.grade),
+      '핸드폰번호': safeText(u.phone),
+      '목표대학': safeText(u.college),
+      '아이디': safeText(u.id),
+      '비밀번호': safeText(u.pw)
+    }));
+  }
+  function downloadCsvFallback(rows, filename){
+    const headers = ['이름','지점','구분','학교','학년','핸드폰번호','목표대학','아이디','비밀번호'];
+    const csv = '\ufeff' + [headers, ...rows.map(r => headers.map(h => r[h]))]
+      .map(row => row.map(v => '"' + safeText(v).replace(/"/g, '""') + '"').join(','))
+      .join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename.replace(/\.xlsx$/i, '.csv');
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 500);
+  }
+  window.downloadAdminUsersExcel = function(){
+    try {
+      const list = getExportUsers();
+      if(!list.length){
+        if(typeof window.showToast === 'function') window.showToast('다운로드할 회원이 없습니다.', 'error');
+        else alert('다운로드할 회원이 없습니다.');
+        return;
+      }
+      const rows = makeRows(list);
+      const branch = window.adminBranchFilter || '전체';
+      const filename = `PPC_회원관리_${branch}_${getTodayKey()}.xlsx`;
+
+      if(window.XLSX && XLSX.utils && XLSX.writeFile){
+        const worksheet = XLSX.utils.json_to_sheet(rows, { header:['이름','지점','구분','학교','학년','핸드폰번호','목표대학','아이디','비밀번호'] });
+        worksheet['!cols'] = [
+          {wch:12},{wch:10},{wch:10},{wch:18},{wch:8},{wch:16},{wch:22},{wch:16},{wch:14}
+        ];
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, '회원관리');
+        XLSX.writeFile(workbook, filename);
+      } else {
+        downloadCsvFallback(rows, filename);
+      }
+      if(typeof window.showToast === 'function') window.showToast('회원관리 엑셀 다운로드 완료', 'success');
+    } catch(error){
+      console.error('엑셀 다운로드 실패', error);
+      if(typeof window.showToast === 'function') window.showToast('엑셀 다운로드 실패', 'error');
+      else alert('엑셀 다운로드 실패');
+    }
+  };
+  document.addEventListener('DOMContentLoaded', function(){
+    document.querySelectorAll('button[onclick="downloadAdminUsersExcel()"]').forEach(btn => {
+      btn.onclick = window.downloadAdminUsersExcel;
+    });
+  });
 })();
 </script>
 
