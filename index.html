@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>PPC 실기 관리 시스템</title>
+    <title>경주PPC 실기 관리 시스템</title>
     <!-- 용량 최적화: 수시실기 이미지는 images/practical 폴더에서 불러옵니다. -->
     
     <!-- External Libraries -->
@@ -294,9 +294,8 @@ button[onclick="toggleAuthMode('signup')"]{
 
 
 <style id="ppc-admin-branch-badge-dedupe">
-#admin-user-list > * > div:first-child.inline-flex,
-#admin-login-log-list > * > div:first-child.inline-flex,
-#admin-inactive-list > * > div:first-child.inline-flex{
+/* 회원관리에서만 기존 카드 상단 중복 배지를 숨김. 로그인기록/미접속학생은 건드리지 않음 */
+#admin-user-list > * > div:first-child.inline-flex{
   display:none !important;
 }
 </style>
@@ -346,6 +345,14 @@ button[onclick="toggleAuthMode('signup')"]{
   .ppc-admin-list-actions button{font-size:.58rem;padding:.42rem .32rem;border-radius:.55rem;}
 }
 </style>
+
+<style id="ppc-admin-compact-hidden-fix">
+/* 로그인기록/미접속학생 탭에서 회원관리 리스트가 같이 보이지 않도록 hidden 우선 적용 */
+#admin-user-list.ppc-admin-compact-list.hidden{
+  display:none !important;
+}
+</style>
+
 </head>
 <body class="max-w-md mx-auto min-h-screen shadow-2xl relative bg-slate-50 overflow-x-hidden">
 
