@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>PPC 실기 관리 시스템</title>
+    <title>경주PPC 실기 관리 시스템</title>
     <!-- 용량 최적화: 수시실기 이미지는 images/practical 폴더에서 불러옵니다. -->
     
     <!-- External Libraries -->
@@ -3910,7 +3910,10 @@ async function openAdminBestByDocId(docId){
       </div>
     </div>
 
-    <div class="p-4 bg-white border-t border-slate-100">
+    <div class="p-4 bg-white border-t border-slate-100 grid grid-cols-2 gap-3">
+      <button onclick="deleteAdminEditUser()" class="w-full bg-rose-600 hover:bg-rose-700 text-white p-4 rounded-2xl font-black shadow-lg active:scale-[0.98]">
+        탈퇴시키기
+      </button>
       <button onclick="saveAdminEditUser()" class="w-full bg-blue-700 hover:bg-blue-800 text-white p-4 rounded-2xl font-black shadow-lg active:scale-[0.98]">
         수정 저장
       </button>
@@ -3974,6 +3977,52 @@ async function openAdminBestByDocId(docId){
   window.closeAdminEditUserModal = function(){
     const modal = document.getElementById('admin-edit-user-modal');
     if(modal) modal.classList.add('hidden');
+  };
+
+
+  window.deleteAdminEditUser = async function(){
+    const docId = document.getElementById('admin-edit-docid').value;
+    const name = (document.getElementById('admin-edit-name').value || '해당').trim();
+
+    if(!docId){
+      if(typeof showToast === 'function') showToast('탈퇴시킬 회원 정보를 찾지 못했습니다.', 'error');
+      else alert('탈퇴시킬 회원 정보를 찾지 못했습니다.');
+      return;
+    }
+
+    if(!confirm(`${name} 회원을 탈퇴시키겠습니까?`)) return;
+
+    try{
+      const dbx = getDb();
+      if(dbx){
+        await dbx.collection('users').doc(docId).delete();
+      }
+
+      const arr = getUsersArray();
+      const idx = arr.findIndex(u => String(u.docId || '') === String(docId) || String(u.id || '') === String(docId));
+      if(idx > -1) arr.splice(idx, 1);
+
+      try{ localStorage.setItem('users', JSON.stringify(arr)); }catch(e){}
+      try{ localStorage.setItem('ppcUsers', JSON.stringify(arr)); }catch(e){}
+
+      closeAdminEditUserModal();
+
+      if(typeof showToast === 'function') showToast('회원 탈퇴 완료', 'success');
+      else alert('회원 탈퇴 완료');
+
+      try{
+        if(typeof loadUsersFromFirestore === 'function') await loadUsersFromFirestore();
+        if(typeof renderAdminPage === 'function') await renderAdminPage();
+        if(typeof showAdminTab === 'function') showAdminTab('users');
+        if(typeof applyAdminBranchFilter === 'function') applyAdminBranchFilter();
+      }catch(e){
+        location.reload();
+      }
+    }catch(error){
+      console.error(error);
+      if(typeof showToast === 'function') showToast('회원 탈퇴 실패: Firebase 설정을 확인해주세요.', 'error');
+      else alert('회원 탈퇴 실패: Firebase 설정을 확인해주세요.');
+    }
   };
 
   window.saveAdminEditUser = async function(){
