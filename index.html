@@ -1028,6 +1028,52 @@ button[onclick="toggleAuthMode('signup')"]{
         // Firestore users 컬렉션 사용
         let users = [];
         let currentUser = null;
+
+        // 학생 자동 로그인 유지용 저장 키
+        const PPC_AUTO_LOGIN_KEY = 'ppcAutoLoginStudentId';
+
+        function saveStudentAutoLogin(user) {
+            try {
+                if(user && user.id && user.id !== 'ppc' && user.id !== 'admin') {
+                    localStorage.setItem(PPC_AUTO_LOGIN_KEY, user.id);
+                }
+            } catch(e) { console.warn('자동 로그인 저장 실패', e); }
+        }
+
+        function clearStudentAutoLogin() {
+            try { localStorage.removeItem(PPC_AUTO_LOGIN_KEY); } catch(e) {}
+        }
+
+        async function restoreStudentAutoLogin() {
+            try {
+                const savedId = localStorage.getItem(PPC_AUTO_LOGIN_KEY);
+                if(!savedId || currentUser || isAdmin) return;
+
+                const docId = getUserDocId(savedId);
+                const userDoc = await db.collection('users').doc(docId).get();
+                if(!userDoc.exists) { clearStudentAutoLogin(); return; }
+
+                const user = { docId: userDoc.id, ...userDoc.data() };
+                if(!user || !user.id) { clearStudentAutoLogin(); return; }
+
+                currentUser = user;
+                tableGender = user.gender || 'male';
+
+                document.getElementById('auth-screen').classList.add('hidden');
+                document.getElementById('app-screen').classList.remove('hidden');
+                document.getElementById('app-screen').classList.add('flex');
+                const nav = document.querySelector('nav');
+                if(nav) nav.style.display = 'flex';
+                const dateInput = document.getElementById('measure-date');
+                if(dateInput) dateInput.valueAsDate = new Date();
+
+                initApp();
+                showView('measure');
+            } catch(error) {
+                console.error('자동 로그인 복원 실패', error);
+                clearStudentAutoLogin();
+            }
+        }
         let activeChartTab = "제자리멀리뛰기";
         let tableGender = "male";
         let chartInstance = null;
@@ -1125,6 +1171,7 @@ button[onclick="toggleAuthMode('signup')"]{
                     const user = { docId: userDoc.id, ...userDoc.data() };
                     currentUser = user;
                     tableGender = user.gender || 'male';
+                    saveStudentAutoLogin(user);
                     
                     document.getElementById('auth-screen').classList.add('hidden');
                     document.getElementById('app-screen').classList.remove('hidden');
@@ -1156,6 +1203,7 @@ button[onclick="toggleAuthMode('signup')"]{
         // Logout
         function logout() { 
             currentUser = null;
+            clearStudentAutoLogin();
             document.getElementById('login-pw').value = '';
             document.getElementById('app-screen').classList.add('hidden');
             document.getElementById('app-screen').classList.remove('flex');
@@ -1163,6 +1211,11 @@ button[onclick="toggleAuthMode('signup')"]{
             document.getElementById('auth-screen').classList.remove('hidden');
             showToast('안전하게 로그아웃 되었습니다.');
         }
+
+        // 앱을 새로 열었을 때 학생 로그인만 자동 복원합니다. 관리자 로그인은 보안상 자동 유지하지 않습니다.
+        document.addEventListener('DOMContentLoaded', function(){
+            setTimeout(restoreStudentAutoLogin, 250);
+        });
 
         // Initialize App Data
         function initApp() {
