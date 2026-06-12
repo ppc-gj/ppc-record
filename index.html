@@ -368,6 +368,8 @@ button[onclick="toggleAuthMode('signup')"]{
 .ppc-admin-stat-bar{height:8px;background:#eff6ff;border-radius:999px;overflow:hidden;margin-top:.75rem;}
 .ppc-admin-stat-bar span{display:block;height:100%;background:#1d4ed8;border-radius:999px;}
 .ppc-admin-excel-btn{width:100%;height:44px;border:0;border-radius:14px;background:#16a34a;color:#fff;font-size:.8rem;font-weight:1000;box-shadow:0 8px 18px rgba(22,163,74,.18);}
+.ppc-admin-backup-btn{width:100%;height:42px;border:0;border-radius:14px;background:#0f172a;color:#fff;font-size:.78rem;font-weight:1000;box-shadow:0 8px 18px rgba(15,23,42,.14);}
+.ppc-admin-restore-btn{width:100%;height:42px;border:0;border-radius:14px;background:#f97316;color:#fff;font-size:.78rem;font-weight:1000;box-shadow:0 8px 18px rgba(249,115,22,.15);}
 </style>
 </head>
 <body class="max-w-md mx-auto min-h-screen shadow-2xl relative bg-slate-50 overflow-x-hidden">
@@ -823,6 +825,12 @@ button[onclick="toggleAuthMode('signup')"]{
         </div>
         <p id="admin-user-search-count" class="text-[10px] font-bold text-slate-400 mt-2"></p>
         <button onclick="downloadAdminUsersExcel()" class="ppc-admin-excel-btn mt-3">엑셀 다운로드</button>
+        <div class="grid grid-cols-2 gap-2 mt-2">
+            <button onclick="downloadPPCBackup()" class="ppc-admin-backup-btn">전체 백업</button>
+            <button onclick="document.getElementById('ppc-backup-restore-input').click()" class="ppc-admin-restore-btn">백업 복원</button>
+        </div>
+        <input id="ppc-backup-restore-input" type="file" accept=".json,application/json" class="hidden" onchange="restorePPCBackupFromInput(this)">
+        <p class="text-[10px] font-bold text-slate-400 mt-2">전체 백업은 회원정보와 로그인기록을 JSON 파일로 저장합니다.</p>
     </div>
 
     <div id="admin-user-list" class="space-y-3"></div>
@@ -4473,6 +4481,128 @@ async function openAdminBestByDocId(docId){
       btn.onclick = window.downloadAdminUsersExcel;
     });
   });
+})();
+</script>
+
+
+<script id="ppc-backup-restore-feature">
+(function(){
+  function getDb(){
+    try { if (typeof db !== 'undefined' && db) return db; } catch(e) {}
+    try { if (window.firebase && firebase.firestore) return firebase.firestore(); } catch(e) {}
+    return null;
+  }
+  function todayText(){
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}_${String(d.getHours()).padStart(2,'0')}${String(d.getMinutes()).padStart(2,'0')}`;
+  }
+  function serializeValue(value){
+    if(value == null) return value;
+    if(value && typeof value.toDate === 'function'){
+      try { return { __ppcType:'timestamp', seconds:value.seconds, nanoseconds:value.nanoseconds || 0, iso:value.toDate().toISOString() }; } catch(e) {}
+    }
+    if(value instanceof Date) return { __ppcType:'date', iso:value.toISOString() };
+    if(Array.isArray(value)) return value.map(serializeValue);
+    if(typeof value === 'object'){
+      const out = {};
+      Object.keys(value).forEach(k => out[k] = serializeValue(value[k]));
+      return out;
+    }
+    return value;
+  }
+  function deserializeValue(value){
+    if(value == null) return value;
+    if(Array.isArray(value)) return value.map(deserializeValue);
+    if(typeof value === 'object'){
+      if(value.__ppcType === 'timestamp'){
+        try { return new firebase.firestore.Timestamp(Number(value.seconds || 0), Number(value.nanoseconds || 0)); } catch(e) { return value.iso || null; }
+      }
+      if(value.__ppcType === 'date'){
+        try { return new Date(value.iso); } catch(e) { return value.iso || null; }
+      }
+      const out = {};
+      Object.keys(value).forEach(k => out[k] = deserializeValue(value[k]));
+      return out;
+    }
+    return value;
+  }
+  async function readCollection(dbx, name){
+    const snap = await dbx.collection(name).get();
+    return snap.docs.map(doc => ({ id: doc.id, data: serializeValue(doc.data()) }));
+  }
+  window.downloadPPCBackup = async function(){
+    try{
+      const dbx = getDb();
+      if(!dbx) throw new Error('Firestore 연결 없음');
+      if(typeof window.showToast === 'function') window.showToast('백업 파일 생성 중...', 'success');
+      const backup = {
+        app: 'PPC 실기관리 시스템',
+        version: 1,
+        createdAt: new Date().toISOString(),
+        collections: {
+          users: await readCollection(dbx, 'users'),
+          loginLogs: await readCollection(dbx, 'loginLogs')
+        }
+      };
+      const blob = new Blob([JSON.stringify(backup, null, 2)], {type:'application/json;charset=utf-8'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `PPC_전체백업_${todayText()}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 500);
+      if(typeof window.showToast === 'function') window.showToast('전체 백업 다운로드 완료', 'success');
+      else alert('전체 백업 다운로드 완료');
+    }catch(error){
+      console.error('백업 실패', error);
+      if(typeof window.showToast === 'function') window.showToast('백업 실패', 'error');
+      else alert('백업 실패');
+    }
+  };
+  async function writeCollection(dbx, name, docs){
+    if(!Array.isArray(docs)) return;
+    let batch = dbx.batch();
+    let count = 0;
+    for(const item of docs){
+      if(!item || !item.id) continue;
+      const ref = dbx.collection(name).doc(String(item.id));
+      batch.set(ref, deserializeValue(item.data || {}), { merge:true });
+      count++;
+      if(count % 400 === 0){ await batch.commit(); batch = dbx.batch(); }
+    }
+    if(count % 400 !== 0) await batch.commit();
+  }
+  window.restorePPCBackupFromInput = async function(input){
+    try{
+      const file = input && input.files && input.files[0];
+      if(!file) return;
+      const ok = confirm('백업 파일을 복원할까요? 같은 아이디의 회원/로그인기록은 백업 내용으로 덮어쓰기 됩니다.');
+      if(!ok){ input.value=''; return; }
+      const text = await file.text();
+      const backup = JSON.parse(text);
+      if(!backup || !backup.collections || !Array.isArray(backup.collections.users)){
+        throw new Error('올바른 PPC 백업 파일이 아닙니다.');
+      }
+      const dbx = getDb();
+      if(!dbx) throw new Error('Firestore 연결 없음');
+      if(typeof window.showToast === 'function') window.showToast('백업 복원 중...', 'success');
+      await writeCollection(dbx, 'users', backup.collections.users);
+      await writeCollection(dbx, 'loginLogs', backup.collections.loginLogs || []);
+      try { if(typeof window.loadUsersFromFirestore === 'function') await window.loadUsersFromFirestore(); } catch(e) {}
+      try { if(typeof window.renderAdminUsers === 'function') window.renderAdminUsers(); } catch(e) {}
+      try { if(typeof window.renderAdminLoginLogs === 'function') window.renderAdminLoginLogs(); } catch(e) {}
+      input.value='';
+      if(typeof window.showToast === 'function') window.showToast('백업 복원 완료', 'success');
+      else alert('백업 복원 완료');
+    }catch(error){
+      console.error('복원 실패', error);
+      if(input) input.value='';
+      if(typeof window.showToast === 'function') window.showToast('복원 실패: 백업 파일을 확인해주세요.', 'error');
+      else alert('복원 실패: 백업 파일을 확인해주세요.');
+    }
+  };
 })();
 </script>
 
