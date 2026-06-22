@@ -371,6 +371,31 @@ button[onclick="toggleAuthMode('signup')"]{
 .ppc-admin-backup-btn{width:100%;height:42px;border:0;border-radius:14px;background:#0f172a;color:#fff;font-size:.78rem;font-weight:1000;box-shadow:0 8px 18px rgba(15,23,42,.14);}
 .ppc-admin-restore-btn{width:100%;height:42px;border:0;border-radius:14px;background:#f97316;color:#fff;font-size:.78rem;font-weight:1000;box-shadow:0 8px 18px rgba(249,115,22,.15);}
 </style>
+
+<style id="ppc-notice-suggestion-style">
+.ppc-top-icon-btn{width:34px;height:34px;border:1px solid rgba(255,255,255,.25);border-radius:999px;background:rgba(255,255,255,.08);font-size:15px;font-weight:900;color:#fff;display:flex;align-items:center;justify-content:center;position:relative;}
+.ppc-top-icon-btn .dot{position:absolute;right:3px;top:3px;width:8px;height:8px;border-radius:999px;background:#ef4444;border:1px solid #fff;}
+.ppc-modal-card{width:100%;max-width:390px;max-height:84vh;overflow:hidden;border-radius:28px;background:#fff;box-shadow:0 24px 70px rgba(15,23,42,.35);display:flex;flex-direction:column;}
+.ppc-modal-head{background:linear-gradient(135deg,#08266f,#1d4ed8);color:#fff;padding:18px 18px 14px;display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.ppc-modal-title{font-size:18px;font-weight:1000;letter-spacing:-.04em;}
+.ppc-modal-close{width:36px;height:36px;border-radius:999px;background:rgba(255,255,255,.14);font-size:20px;font-weight:900;color:#fff;}
+.ppc-modal-body{padding:16px;overflow:auto;background:#f8fafc;}
+.ppc-seg{display:grid;grid-template-columns:1fr 1fr;gap:6px;background:#e2e8f0;padding:5px;border-radius:16px;margin-bottom:12px;}
+.ppc-seg button{height:38px;border-radius:12px;font-size:12px;font-weight:1000;color:#64748b;}
+.ppc-seg button.active{background:#fff;color:#1d4ed8;box-shadow:0 4px 10px rgba(15,23,42,.08);}
+.ppc-card{background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:14px;box-shadow:0 5px 15px rgba(15,23,42,.04);}
+.ppc-card+.ppc-card{margin-top:10px;}
+.ppc-card-title{font-size:14px;font-weight:1000;color:#0f172a;margin-bottom:5px;}
+.ppc-card-meta{font-size:10px;font-weight:800;color:#94a3b8;margin-bottom:8px;}
+.ppc-card-content{font-size:12px;font-weight:700;color:#334155;white-space:pre-wrap;line-height:1.55;}
+.ppc-form-input{width:100%;border:1px solid #e2e8f0;background:#fff;border-radius:14px;padding:12px;font-size:13px;font-weight:800;color:#0f172a;outline:none;}
+.ppc-form-input:focus{border-color:#60a5fa;box-shadow:0 0 0 3px rgba(96,165,250,.18);}
+.ppc-form-label{font-size:10px;font-weight:1000;color:#64748b;margin:10px 0 5px 4px;display:block;}
+.ppc-primary-btn{width:100%;height:44px;border-radius:14px;background:#1d4ed8;color:#fff;font-size:13px;font-weight:1000;box-shadow:0 8px 18px rgba(29,78,216,.16);}
+.ppc-danger-btn{border-radius:12px;background:#fee2e2;color:#dc2626;font-size:11px;font-weight:1000;padding:9px 12px;}
+.ppc-small-btn{border-radius:12px;background:#eff6ff;color:#1d4ed8;font-size:11px;font-weight:1000;padding:9px 12px;}
+.ppc-status{display:inline-flex;border-radius:999px;padding:4px 8px;font-size:10px;font-weight:1000;background:#eff6ff;color:#1d4ed8;}
+</style>
 </head>
 <body class="max-w-md mx-auto min-h-screen shadow-2xl relative bg-slate-50 overflow-x-hidden">
 
@@ -545,7 +570,11 @@ button[onclick="toggleAuthMode('signup')"]{
             <div class="measure-hero">
                 <div class="measure-topbar">
                     <img class="measure-mini-logo ppc-measure-logo-final" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAgUAAADKCAYAAAA1vTNFAAAKMWlDQ1BJQ0MgUHJvZmlsZQAAeJydlndUU9kWh8+9N71QkhCKlNBraFICSA29SJEuKjEJEErAkAAiNkRUcERRkaYIMijggKNDkbEiioUBUbHrBBlE1HFwFBuWSWStGd+8ee/Nm98f935rn73P3Wfvfda6AJD8gwXCTFgJgAyhWBTh58WIjYtnYAcBDPAAA2wA4HCzs0IW+EYCmQJ82IxsmRP4F726DiD5+yrTP4zBAP+flLlZIjEAUJiM5/L42VwZF8k4PVecJbdPyZi2NE3OMErOIlmCMlaTc/IsW3z2mWUPOfMyhDwZy3PO4mXw5Nwn4405Er6MkWAZF+cI+LkyviZjg3RJhkDGb+SxGXxONgAoktwu5nNTZGwtY5IoMoIt43kA4EjJX/DSL1jMzxPLD8XOzFouEiSniBkmXFOGjZMTi+HPz03ni8XMMA43jSPiMdiZGVkc4XIAZs/8WRR5bRmyIjvYODk4MG0tbb4o1H9d/JuS93aWXoR/7hlEH/jD9ld+mQ0AsKZltdn6h21pFQBd6wFQu/2HzWAvAIqyvnUOfXEeunxeUsTiLGcrq9zcXEsBn2spL+jv+p8Of0NffM9Svt3v5WF485M4knQxQ143bmZ6pkTEyM7icPkM5p+H+B8H/nUeFhH8JL6IL5RFRMumTCBMlrVbyBOIBZlChkD4n5r4D8P+pNm5lona+BHQllgCpSEaQH4eACgqESAJe2Qr0O99C8ZHA/nNi9GZmJ37z4L+fVe4TP7IFiR/jmNHRDK4ElHO7Jr8WgI0IABFQAPqQBvoAxPABLbAEbgAD+ADAkEoiARxYDHgghSQAUQgFxSAtaAYlIKtYCeoBnWgETSDNnAYdIFj4DQ4By6By2AE3AFSMA6egCnwCsxAEISFyBAVUod0IEPIHLKFWJAb5AMFQxFQHJQIJUNCSAIVQOugUqgcqobqoWboW+godBq6AA1Dt6BRaBL6FXoHIzAJpsFasBFsBbNgTzgIjoQXwcnwMjgfLoK3wJVwA3wQ7oRPw5fgEVgKP4GnEYAQETqiizARFsJGQpF4JAkRIauQEqQCaUDakB6kH7mKSJGnyFsUBkVFMVBMlAvKHxWF4qKWoVahNqOqUQdQnag+1FXUKGoK9RFNRmuizdHO6AB0LDoZnYsuRlegm9Ad6LPoEfQ4+hUGg6FjjDGOGH9MHCYVswKzGbMb0445hRnGjGGmsVisOtYc64oNxXKwYmwxtgp7EHsSewU7jn2DI+J0cLY4X1w8TogrxFXgWnAncFdwE7gZvBLeEO+MD8Xz8MvxZfhGfA9+CD+OnyEoE4wJroRIQiphLaGS0EY4S7hLeEEkEvWITsRwooC4hlhJPEQ8TxwlviVRSGYkNimBJCFtIe0nnSLdIr0gk8lGZA9yPFlM3kJuJp8h3ye/UaAqWCoEKPAUVivUKHQqXFF4pohXNFT0VFysmK9YoXhEcUjxqRJeyUiJrcRRWqVUo3RU6YbStDJV2UY5VDlDebNyi/IF5UcULMWI4kPhUYoo+yhnKGNUhKpPZVO51HXURupZ6jgNQzOmBdBSaaW0b2iDtCkVioqdSrRKnkqNynEVKR2hG9ED6On0Mvph+nX6O1UtVU9Vvuom1TbVK6qv1eaoeajx1UrU2tVG1N6pM9R91NPUt6l3qd/TQGmYaYRr5Grs0Tir8XQObY7LHO6ckjmH59zWhDXNNCM0V2ju0xzQnNbS1vLTytKq0jqj9VSbru2hnaq9Q/uE9qQOVcdNR6CzQ+ekzmOGCsOTkc6oZPQxpnQ1df11Jbr1uoO6M3rGelF6hXrtevf0Cfos/ST9Hfq9+lMGOgYhBgUGrQa3DfGGLMMUw12G/YavjYyNYow2GHUZPTJWMw4wzjduNb5rQjZxN1lm0mByzRRjyjJNM91tetkMNrM3SzGrMRsyh80dzAXmu82HLdAWThZCiwaLG0wS05OZw2xljlrSLYMtCy27LJ9ZGVjFW22z6rf6aG1vnW7daH3HhmITaFNo02Pzq62ZLde2xvbaXPJc37mr53bPfW5nbse322N3055qH2K/wb7X/oODo4PIoc1h0tHAMdGx1vEGi8YKY21mnXdCO3k5rXY65vTW2cFZ7HzY+RcXpkuaS4vLo3nG8/jzGueNueq5clzrXaVuDLdEt71uUnddd457g/sDD30PnkeTx4SnqWeq50HPZ17WXiKvDq/XbGf2SvYpb8Tbz7vEe9CH4hPlU+1z31fPN9m31XfKz95vhd8pf7R/kP82/xsBWgHcgOaAqUDHwJWBfUGkoAVB1UEPgs2CRcE9IXBIYMj2kLvzDecL53eFgtCA0O2h98KMw5aFfR+OCQ8Lrwl/GGETURDRv4C6YMmClgWvIr0iyyLvRJlESaJ6oxWjE6Kbo1/HeMeUx0hjrWJXxl6K04gTxHXHY+Oj45vipxf6LNy5cDzBPqE44foi40V5iy4s1licvvj4EsUlnCVHEtGJMYktie85oZwGzvTSgKW1S6e4bO4u7hOeB28Hb5Lvyi/nTyS5JpUnPUp2Td6ePJninlKR8lTAFlQLnqf6p9alvk4LTduf9ik9Jr09A5eRmHFUSBGmCfsytTPzMoezzLOKs6TLnJftXDYlChI1ZUPZi7K7xTTZz9SAxESyXjKa45ZTk/MmNzr3SJ5ynjBvYLnZ8k3LJ/J9879egVrBXdFboFuwtmB0pefK+lXQqqWrelfrry5aPb7Gb82BtYS1aWt/KLQuLC98uS5mXU+RVtGaorH1futbixWKRcU3NrhsqNuI2ijYOLhp7qaqTR9LeCUXS61LK0rfb+ZuvviVzVeVX33akrRlsMyhbM9WzFbh1uvb3LcdKFcuzy8f2x6yvXMHY0fJjpc7l+y8UGFXUbeLsEuyS1oZXNldZVC1tep9dUr1SI1XTXutZu2m2te7ebuv7PHY01anVVda926vYO/Ner/6zgajhop9mH05+x42Rjf2f836urlJo6m06cN+4X7pgYgDfc2Ozc0tmi1lrXCrpHXyYMLBy994f9Pdxmyrb6e3lx4ChySHHn+b+O31w0GHe4+wjrR9Z/hdbQe1o6QT6lzeOdWV0iXtjusePhp4tLfHpafje8vv9x/TPVZzXOV42QnCiaITn07mn5w+lXXq6enk02O9S3rvnIk9c60vvG/wbNDZ8+d8z53p9+w/ed71/LELzheOXmRd7LrkcKlzwH6g4wf7HzoGHQY7hxyHui87Xe4Znjd84or7ldNXva+euxZw7dLI/JHh61HXb95IuCG9ybv56Fb6ree3c27P3FlzF3235J7SvYr7mvcbfjT9sV3qID0+6j068GDBgztj3LEnP2X/9H686CH5YcWEzkTzI9tHxyZ9Jy8/Xvh4/EnWk5mnxT8r/1z7zOTZd794/DIwFTs1/lz0/NOvm1+ov9j/0u5l73TY9P1XGa9mXpe8UX9z4C3rbf+7mHcTM7nvse8rP5h+6PkY9PHup4xPn34D94Tz+6TMXDkAAA9pSURBVHic7d3bdiu3DkRROCP//8s6D0c7sR1bIrtJooBa8yUZuVi8gGC5vS19PB6P2Gz7CwA/+Fj4tahhZFhZw11wFjf7K3sAwCY0D1RHDX/FehxwIhSQdpFlVROhhpGFi/D/WIczPk49KaCpIgvBANW5X4ju8z/lI+Lsjw9oqshCMEB1rhej67xP+6e3nf4zBTRVZCEYoDq3C9Jtvlm+9LSMP2hIU0UWggGqc7koXeaZ7T+9LOu3D2iqyEIwQHXdL8zu81PxYw/L/JVEmiqyEAxQXdeLs+u81Pzau7Lfp4CmiiwEA1TX7QLtNh9VL3tWdiiIoKkiD8EA1XW5SLvMQ93bXqUQCiJoqshDMEB11S/U6uOvYqhHqYSCCJoq8hAMUF3Vi7XquKsZ7k1KoSCCpoo8BANUV+2CrTbeqqZ6klooiKCpIg/BANVVuWirjLO66V6kGAoiaKrIQzBAdeoXrvr4urjUg1RDQQRNFXkIBqhO9eJVHVc3l3uPciiIoKkiD8EA1aldwGrj6epWz1EPBRE0VeQhGKA6lYtYZRzd3e41FUJBBE0VeQgGqC77Qs5+fRdLekyVUBBBU0UeggGqy7qYCQRnLOstlUJBBE0VeQgGqO70BU0gOGNpT6kWCiJoqshDMEB1py5qAsEZy3tJxVAQQVNFHoIBqtt9YRMIztjSQ6qGggiaKvIQDFDdroubQHDGtt5RORRE0FSRh2CA6lZf4ASCM7b2jOqhIIKmijwEA1S3qoYJBGds7xUdQkEETRV5CAaobEXdEQjOONIjuoSCCJoq8hAMUBGBoI5jvaFTKIigqSIPwQCVEAjqONoTuoWCCJoq8hAMUAGBoI7jvaBjKIigqSIPwQDKCAR1pPSArqEggqaKPAQDKCIQ1JF29juHggiaKvIQDKCEQFBH6pnvHgoiaKrIQzCAAgJBHeln3SEURAgsNGwRDJCJQFCHxBl3CQURIgsOSwQDZCAQ1CFztp1CQYTQwsMOwQAnEQjqkDrTbqEgQmwDYIVggBMIBHXInWXHUBAhuBGwQTDATgSCOiTPsGsoiBDdEFggGGAHAkEdsmf34/GgBiDHpShlGwNuO13DBIIxnLk3nJ8UQJfLwXVowq5O1jCBYIxLX7mFUABVLgfYoRm7OlHDBIIxLv3kNkIBlLkcZIem7GpnDRMIxrj0kSUIBVDncqAdmrOrHTVMIBjj0j+WIRSgApeD7dCkXa2sYQLBGJe+sRShAFW4HHCHZu1qRQ0TCMa49IvlCAWoxOWgOzRtV3dqmEAwxqVPbEEoQDUuB96hebu6UsMEgjEu/WEbQgEqcjn4Dk3c1UwNEwjGuPSFrQgFqMqlATg0c1cjNUwgGOPSD7YjFKAyl0bg0NRdvaphAsEYlz5wBJ99kMth8U8cWId1jNBufg57sHP9v68fgWCM8pkoiScFeRwO7CkujUG1ZlTHVcnHL39/lcOeuJz7owgFORwObES9D4WpQK121Mazy6nPMSAQjHE578cRCs5zOLAROYfWpVGo1JDKOHarVFcOe1JpP8ohFJzlcGAjcg+tS8PIrqXs1z+lUj057Eml/SiJUHCOw4GN0Di0CmM4IaumqGU9DntSaT/KIhSc4XBgI7QOrdJYdjpdW9SyHoc9qbQfpREK9nM4sBGah1ZxTDucqjFqWY/DnlTaj/IIBXs5HNgI7UOrPLaVdtcatazHYU8q7UcLhIJ9HA5sRI1DW2GMK+yqOWpZj8OeVNqPNggFezgc2Ihah7bSWO9YXXvUsh6XPUECQsF6Lge2UhONYF+uYM0AM4SCtWiimtiXeayZropjvsKlBqUQCtZxKeBqDYl9mcea6as89hkutSiDULCGS+FWa0TsyzzWrI4OcxjhUpMSCAX3uRRstQbEvsxjzerpNJdXXGozHaHgHpdCrdZ42Jd5rFldHef0E5caTUUouM6lQKs1HPZlHmtWX+e5feZSq2kIBde4FGa1RsO+zGPN+nCYY4RPzaYgFMxzKchqDYZ9mcea6bm7J5XmeodL7R5HKJjjUojVGgv7Mo810/P49terKs35DpcaPopQMM6lAKs1FPZlHmum5/ueEAzGuNTyMYSCMS6FV62RsC/zWDM9v+0JwWCMS00fQSh4z6XgqjUQ9mUea6bn3Z4QDMa41PZ2hILXXAqtWuNgX+axZnpG94RgMMalxrciFPzOpcCqNQz2ZR5rpmd2TwgGY1xqfRtCwc9cCqtao2Bf5rFmeq7uCcFgjEvNb0Eo+C+XgqrWINiXeayZnrt7QjAY41L7yxEKvnIppGqNgX2Zx5rpWbUnBIMxLmdgKULBv1wKqFpDYF/msWZ6Vu8JwWCMy1lYhlDwfy6FU60RsC/zWDM9u/aEYDDG5UwsQSjwKZhqDYB9mcea6dm9JwSDMS5n4zb3UOBSKNUOPvsyjzXTc2pPCAZjXM7ILR+Ph+06uUx81YF3Wa9TCATz7q5Z93VifeqQDWKuTwpcip9AoIlAMI8L7z2eGNQhW4+OoUB2MxYjEGgiEMwjEIwjGNQhWZduoUByEzYgEGgiEMwjEMwjGNQhV59OoUBu8TchEGgiEMwjEFxHMKhDqk5dQoHUom9EINBEIJhHILiPYFCHTL06hAKZxd6MQKCJQDCPQLAOwaAOibrtHgokFvkAAoEmAsE8AsF6BIM60uu3cyhIX9xDCASaCATzCAT7EAzqSK3jrqHApTkQCDQRCOYRCPYjGNSRVs8dQ4FLcyAQaCIQzCMQnEMwqCOlrruFApfmQCDQRCCYRyA4j2BQx/H67hQKXJoDgUATgWAegSAPwaCOo3XeJRS4NAcCgSYCwTwCQT6CQR3H6r1DKHBpDgQCTQSCeQQCHQSDOo7UffVQ4NIcCASaCATzCARaVtQwweCc7fVfORS4NAcCgSYCwTwCgZaVNUwwOGfrOagaClyaA4FAE4FgHoFAy45LnGBwzrbzUDEUuDQHAoEmAsE8AoGWnZc3weCcLeeiWihwaQ4EAk0EgnkEAi0nLm2CwTnLz0elUODSHAgEmggE8wgEWk5e1gSDc5aekyqhwKU5EAg0EQjmEQi0ZFzSBINzlp2XCqHApTkQCDQRCOYRCLRkXs4Eg3OWnBv1UODSHAgEmggE8wgEWhQuZYUxuLh9fpRDgUtzIBBoIhDMIxBoUbqMlcbS3a1zpBoKXJoDgUATgWAegUCL4iWsOKauLp8nxVDg0hwIBJoIBPMIBFqUL1/lsXVz6VyphQKX5kAg0EQgmEcg0FLh0q0wxi6mz5dSKHBpDgQCTQSCeQQCLZUu20pjrW7qnKmEApfmQCDQRCCYRyDQUvGSrTjmqobPm0IocGkOBAJNBIJ5BAItlS/XymOvZujcZYcCl+ZAINBEIJhHINDS4VLtMIcq3p6/zFDg0hwIBJoIBPMIBFo6Xaad5qLu5TnMCgUuzYFAoIlAMI9AoKXjJdpxTqp+PY8ZocClORAINBEI5hEItHS+PDvPTc2P5/J0KHBpDgQCTQSCeQQCLQ6XpsMcVfznfJ4MBS7NgUCgiUAwj0CgxemydJprti/n9FQocGkOBAJNBIJ5BAItjpek45yz/HNeT4QCl+ZAINBEIJhHINDifDk6z/20R8T+UODSHAgEmggE8wgEWrgUWYOTHjtDgUtzIBBoIhDMo/lqYT/+xVoc8vF4bOl3NFF0QS0DsLHjSQFNFF1QywCsrA4FNFF0QS0DsLMyFNBE0QW1DMDSqlBAE0UX1DIAWytCAU0UXVDLAKzdDQU0UXRBLQOwdycU0ETRBbUMAHE9FNBE0QW1DABPV0IBTRRdUMsA8MlsKKCJogtqGQC+mQkFNFF0QS0DwA9GQwFNFF1QywDwi5FQQBNFF9QyALzwLhTQRNEFtQwAb7wKBTRRdEEtA8CA30IBTRRdUMsAMOjvH/4ZTRQduNRxBLUMYJHvTwpcGilNFF1QywCW+RwKCATogloGgAv+hAKaKLqglgHgor+CJoo+qGUAuOHvoMGgD2oZAG64+tHJAACgGUIBAACICEIBAAB4IhQAAICIIBQAAIAnQgEAAIgIQgEAAHgiFAAAgIggFAAAgCdCAQAAiAhCAQAAeCIUAACAiCAUAACAJ0IBAACICEIBAAB4IhQAAICIIBQAAIAnQgEAAIgIQgEAAHgiFAAAgIggFAAAgCdCAQAAiAhCAQAAeCIUAACAiIj4++BrPTZ93Y/k11J67VdOjCtr7itf97fX2jG3k7Wb8bp3a/az2fHNvnalnlGhD+2sp9GvvasGPgb/25nXX/31LuvwpOBEE/38Wr+93qt/l011XKNejX/13E7uo0LNKIxhh9E5dZ3/Lu/WS2k9Z8ahMuZ0HUJBxPkNrVRAlcb6yk/z2Dm302EzQ5faqKzqHpw+j2pWPq2ReUoQ0ScUROQWpOphUB3XCp3nhq927XXVGqo6bkfv9kpuLzuFAvQnd4AAYxXO48gYr87j1Hfvx54SRBAKAPSlfmmpjw/v3fkxgtSPDf4gFABQxsX5M9allu/7Jbt/J38l8Z2Tv2Zz+tdqjqe9QSfHpbrmJ19v1XcGr77Oqj1VrdlTus9f8Xzs8njx+ivmN/orile+7nE8KQDQmep3ZKrjwjUzYV7yxwZ/EAoAqJJunptlvkERrmmxZ0o/PsB56n/qFnmojXy7HktnuDuPFe/o+v1rqK5t6hniSQGuUHrXMmg5WRuZb7l7h9p4sM7dCz09VCs9KXB4Bzln3de8+/xmvfrDXaP//6hO31FHzL9nfvpFgi+u1qPEPvKkAHd0asSAIomLoonHL3+PTwgFvdFQkGln41X5FMRZKuPAXrP1KdOrlX58AOAs1cfuO9+atoLZufEjhK/u1PXKM7HjI5a340lBfx8hVnQ3dJmHkk71AbzTOUwu0elJgeK78ym5OmYO0X4K9eRQH9nfUVdaq9UUavyPk/vw7mmB0rpERJ8nBQSC3jp/N9t1Xlc5X5xY58q54iyG1pMCLvbeuq/5T/PjgsMp2U9B0ESXJwWAIpo0/iAgogSlJwWdrfokrozXrarK3LO+w1NcnxNjGl3vDp8O+Mrp/c/ogTO/SaC6T8cRCoC9RhoTj37HVH1b4xErggp1hNv48QEA7NX9qQMaIRQA+7X4SNULZt/D/xS1ta562VcYd4UxSiEUrOFaeJnz3v3arnuqamY/Rv/bjnusFngq6FgHlxEK1nErLIX5KoxhlNvTgkp7s1OnPf3sp/1lzxsgFKzlciiU5rl6LDvfKElp3Xap9kZT2eOt9sE579Yrez1x0/8ArMrapLOYb7MAAAAASUVORK5CYII=" alt="PPC SPORTS ACADEMY">
-                    <button onclick="logout()" class="measure-bell">⌂</button>
+                    <div class="flex items-center gap-2">
+                        <button onclick="openPPCNoticeModal()" class="ppc-top-icon-btn" title="공지사항"><span>🔔</span><span id="ppc-notice-dot" class="dot hidden"></span></button>
+                        <button onclick="openPPCSuggestionModal()" class="ppc-top-icon-btn" title="건의함">💬</button>
+                        <button onclick="logout()" class="measure-bell">⌂</button>
+                    </div>
                 </div>
                 <div class="measure-user-row">
                     <div class="measure-avatar" id="measure-avatar">●</div>
@@ -796,11 +825,13 @@ button[onclick="toggleAuthMode('signup')"]{
         </button>
     </div>
 
-    <div class="bg-slate-200/70 p-1 rounded-2xl grid grid-cols-4 gap-1">
+    <div class="bg-slate-200/70 p-1 rounded-2xl grid grid-cols-3 gap-1">
         <button id="admin-tab-users" onclick="showAdminTab('users')" class="admin-tab-btn bg-white text-indigo-600 shadow px-3 py-3 rounded-xl text-xs font-black">회원관리</button>
         <button id="admin-tab-logs" onclick="showAdminTab('logs')" class="admin-tab-btn text-slate-500 px-3 py-3 rounded-xl text-xs font-black">로그인기록</button>
         <button id="admin-tab-inactive" onclick="showAdminTab('inactive')" class="admin-tab-btn text-slate-500 px-3 py-3 rounded-xl text-xs font-black">미접속학생</button>
         <button id="admin-tab-stats" onclick="showAdminTab('stats')" class="admin-tab-btn text-slate-500 px-3 py-3 rounded-xl text-xs font-black">지점통계</button>
+        <button id="admin-tab-notices" onclick="showAdminTab('notices')" class="admin-tab-btn text-slate-500 px-3 py-3 rounded-xl text-xs font-black">공지관리</button>
+        <button id="admin-tab-suggestions" onclick="showAdminTab('suggestions')" class="admin-tab-btn text-slate-500 px-3 py-3 rounded-xl text-xs font-black">건의함</button>
     </div>
 
 
@@ -837,8 +868,54 @@ button[onclick="toggleAuthMode('signup')"]{
     <div id="admin-login-log-list" class="space-y-3 hidden"></div>
     <div id="admin-inactive-list" class="space-y-3 hidden"></div>
     <div id="admin-branch-stats-list" class="hidden"></div>
+    <div id="admin-notice-list" class="space-y-3 hidden"></div>
+    <div id="admin-suggestion-list" class="space-y-3 hidden"></div>
 
 </section>
+
+
+        <!-- Modal: Notices / Suggestions -->
+        <div id="ppc-notice-modal" class="hidden fixed inset-0 bg-slate-950/55 backdrop-blur-sm z-[1001] p-4 items-center justify-center">
+          <div class="ppc-modal-card">
+            <div class="ppc-modal-head">
+              <div><p class="ppc-modal-title">공지사항</p><p class="text-[10px] font-bold text-blue-100 mt-1">학원 공지를 확인하세요</p></div>
+              <button onclick="closePPCNoticeModal()" class="ppc-modal-close">×</button>
+            </div>
+            <div class="ppc-modal-body">
+              <div id="ppc-notice-user-list" class="space-y-2"></div>
+            </div>
+          </div>
+        </div>
+
+        <div id="ppc-suggestion-modal" class="hidden fixed inset-0 bg-slate-950/55 backdrop-blur-sm z-[1001] p-4 items-center justify-center">
+          <div class="ppc-modal-card">
+            <div class="ppc-modal-head">
+              <div><p class="ppc-modal-title">건의함</p><p class="text-[10px] font-bold text-blue-100 mt-1">앱 추가/수정사항을 보내주세요</p></div>
+              <button onclick="closePPCSuggestionModal()" class="ppc-modal-close">×</button>
+            </div>
+            <div class="ppc-modal-body">
+              <div class="ppc-seg">
+                <button id="ppc-sug-tab-write" class="active" onclick="setPPCSuggestionTab('write')">건의 작성</button>
+                <button id="ppc-sug-tab-my" onclick="setPPCSuggestionTab('my')">내 건의</button>
+              </div>
+              <div id="ppc-suggestion-write-box">
+                <label class="ppc-form-label">분류</label>
+                <select id="ppc-sug-category" class="ppc-form-input">
+                  <option value="기능추가">기능추가</option>
+                  <option value="수정요청">수정요청</option>
+                  <option value="오류제보">오류제보</option>
+                  <option value="기타">기타</option>
+                </select>
+                <label class="ppc-form-label">제목</label>
+                <input id="ppc-sug-title" class="ppc-form-input" placeholder="예: 기록 입력 화면 수정 요청">
+                <label class="ppc-form-label">내용</label>
+                <textarea id="ppc-sug-content" class="ppc-form-input" rows="6" placeholder="어떤 부분을 추가하거나 수정하면 좋을지 적어주세요"></textarea>
+                <button onclick="submitPPCSuggestion()" class="ppc-primary-btn mt-3">건의 보내기</button>
+              </div>
+              <div id="ppc-suggestion-my-box" class="hidden space-y-2"></div>
+            </div>
+          </div>
+        </div>
 
         <!-- Bottom Navigation -->
         <nav class="fixed bottom-0 left-0 right-0 max-w-md mx-auto glass h-20 flex items-center justify-around px-2 rounded-t-[2.5rem] z-50 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)] pb-safe">
@@ -2727,7 +2804,32 @@ function downloadAdminUsersExcel() {
         ]);
         const tableRows = [headers, ...rows].map(row => '<tr>' + row.map(cell => `<td>${escapeHtml(cell)}</td>`).join('') + '</tr>').join('');
         const html = `
-            <html><head><meta charset="UTF-8"></head><body>
+            <html><head><meta charset="UTF-8">
+<style id="ppc-notice-suggestion-style">
+.ppc-top-icon-btn{width:34px;height:34px;border:1px solid rgba(255,255,255,.25);border-radius:999px;background:rgba(255,255,255,.08);font-size:15px;font-weight:900;color:#fff;display:flex;align-items:center;justify-content:center;position:relative;}
+.ppc-top-icon-btn .dot{position:absolute;right:3px;top:3px;width:8px;height:8px;border-radius:999px;background:#ef4444;border:1px solid #fff;}
+.ppc-modal-card{width:100%;max-width:390px;max-height:84vh;overflow:hidden;border-radius:28px;background:#fff;box-shadow:0 24px 70px rgba(15,23,42,.35);display:flex;flex-direction:column;}
+.ppc-modal-head{background:linear-gradient(135deg,#08266f,#1d4ed8);color:#fff;padding:18px 18px 14px;display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.ppc-modal-title{font-size:18px;font-weight:1000;letter-spacing:-.04em;}
+.ppc-modal-close{width:36px;height:36px;border-radius:999px;background:rgba(255,255,255,.14);font-size:20px;font-weight:900;color:#fff;}
+.ppc-modal-body{padding:16px;overflow:auto;background:#f8fafc;}
+.ppc-seg{display:grid;grid-template-columns:1fr 1fr;gap:6px;background:#e2e8f0;padding:5px;border-radius:16px;margin-bottom:12px;}
+.ppc-seg button{height:38px;border-radius:12px;font-size:12px;font-weight:1000;color:#64748b;}
+.ppc-seg button.active{background:#fff;color:#1d4ed8;box-shadow:0 4px 10px rgba(15,23,42,.08);}
+.ppc-card{background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:14px;box-shadow:0 5px 15px rgba(15,23,42,.04);}
+.ppc-card+.ppc-card{margin-top:10px;}
+.ppc-card-title{font-size:14px;font-weight:1000;color:#0f172a;margin-bottom:5px;}
+.ppc-card-meta{font-size:10px;font-weight:800;color:#94a3b8;margin-bottom:8px;}
+.ppc-card-content{font-size:12px;font-weight:700;color:#334155;white-space:pre-wrap;line-height:1.55;}
+.ppc-form-input{width:100%;border:1px solid #e2e8f0;background:#fff;border-radius:14px;padding:12px;font-size:13px;font-weight:800;color:#0f172a;outline:none;}
+.ppc-form-input:focus{border-color:#60a5fa;box-shadow:0 0 0 3px rgba(96,165,250,.18);}
+.ppc-form-label{font-size:10px;font-weight:1000;color:#64748b;margin:10px 0 5px 4px;display:block;}
+.ppc-primary-btn{width:100%;height:44px;border-radius:14px;background:#1d4ed8;color:#fff;font-size:13px;font-weight:1000;box-shadow:0 8px 18px rgba(29,78,216,.16);}
+.ppc-danger-btn{border-radius:12px;background:#fee2e2;color:#dc2626;font-size:11px;font-weight:1000;padding:9px 12px;}
+.ppc-small-btn{border-radius:12px;background:#eff6ff;color:#1d4ed8;font-size:11px;font-weight:1000;padding:9px 12px;}
+.ppc-status{display:inline-flex;border-radius:999px;padding:4px 8px;font-size:10px;font-weight:1000;background:#eff6ff;color:#1d4ed8;}
+</style>
+</head><body>
             <table border="1">${tableRows}</table>
             </body></html>
         `;
@@ -4657,6 +4759,163 @@ async function openAdminBestByDocId(docId){
     }
   };
 })();
+
+
+/* PPC 공지사항 + 건의함 기능 */
+let ppcSuggestionTab = 'write';
+function ppcDb(){ try { return db || (window.firebase && firebase.firestore ? firebase.firestore() : null); } catch(e){ return null; } }
+function ppcText(v){ return (v === undefined || v === null) ? '' : String(v); }
+function ppcEsc(v){ return ppcText(v).replace(/[&<>'"]/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[s])); }
+function ppcDate(v){
+  try{ if(v && typeof v.toDate === 'function') return v.toDate(); }catch(e){}
+  try{ if(v && v.seconds) return new Date(v.seconds*1000); }catch(e){}
+  try{ const d=new Date(v); return isNaN(d.getTime()) ? null : d; }catch(e){ return null; }
+}
+function ppcDateFmt(v){ const d=ppcDate(v); if(!d) return '-'; return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; }
+
+async function openPPCNoticeModal(){
+  const modal=document.getElementById('ppc-notice-modal'); if(modal){ modal.classList.remove('hidden'); modal.classList.add('flex'); }
+  await renderPPCUserNotices();
+}
+function closePPCNoticeModal(){ const modal=document.getElementById('ppc-notice-modal'); if(modal){ modal.classList.add('hidden'); modal.classList.remove('flex'); } }
+async function renderPPCUserNotices(){
+  const box=document.getElementById('ppc-notice-user-list'); if(!box) return;
+  box.innerHTML='<div class="ppc-card text-center text-slate-400 font-black text-xs">불러오는 중...</div>';
+  try{
+    const dbx=ppcDb(); if(!dbx) throw new Error('db');
+    const snap=await dbx.collection('notices').orderBy('createdAt','desc').limit(50).get();
+    const rows=[]; snap.forEach(doc=>{ const x={id:doc.id,...doc.data()}; if(x.visible !== false) rows.push(x); });
+    if(!rows.length){ box.innerHTML='<div class="ppc-card text-center text-slate-400 font-black text-xs">등록된 공지가 없습니다.</div>'; return; }
+    box.innerHTML=rows.map(n=>`<div class="ppc-card">
+      <div class="flex items-start justify-between gap-2"><div class="ppc-card-title">${ppcEsc(n.title||'공지')}</div>${n.pinned?'<span class="ppc-status">고정</span>':''}</div>
+      <div class="ppc-card-meta">${ppcDateFmt(n.createdAt)}</div>
+      <div class="ppc-card-content">${ppcEsc(n.content||'')}</div>
+    </div>`).join('');
+  }catch(e){ console.error(e); box.innerHTML='<div class="ppc-card text-center text-rose-500 font-black text-xs">공지를 불러오지 못했습니다.</div>'; }
+}
+async function updatePPCNoticeDot(){
+  try{ const dot=document.getElementById('ppc-notice-dot'); if(!dot) return; const dbx=ppcDb(); if(!dbx) return; const snap=await dbx.collection('notices').orderBy('createdAt','desc').limit(1).get(); dot.classList.toggle('hidden', snap.empty); }catch(e){}
+}
+
+function openPPCSuggestionModal(){ const modal=document.getElementById('ppc-suggestion-modal'); if(modal){ modal.classList.remove('hidden'); modal.classList.add('flex'); } setPPCSuggestionTab('write'); }
+function closePPCSuggestionModal(){ const modal=document.getElementById('ppc-suggestion-modal'); if(modal){ modal.classList.add('hidden'); modal.classList.remove('flex'); } }
+function setPPCSuggestionTab(tab){
+  ppcSuggestionTab=tab;
+  const write=document.getElementById('ppc-suggestion-write-box'), my=document.getElementById('ppc-suggestion-my-box');
+  const bw=document.getElementById('ppc-sug-tab-write'), bm=document.getElementById('ppc-sug-tab-my');
+  if(write) write.classList.toggle('hidden', tab!=='write'); if(my) my.classList.toggle('hidden', tab!=='my');
+  if(bw) bw.classList.toggle('active', tab==='write'); if(bm) bm.classList.toggle('active', tab==='my');
+  if(tab==='my') renderPPCMySuggestions();
+}
+async function submitPPCSuggestion(){
+  try{
+    if(!currentUser && !isAdmin) return showToast('로그인 후 이용해주세요.','error');
+    const category=document.getElementById('ppc-sug-category').value;
+    const title=document.getElementById('ppc-sug-title').value.trim();
+    const content=document.getElementById('ppc-sug-content').value.trim();
+    if(!title || !content) return showToast('제목과 내용을 입력해주세요.','error');
+    const dbx=ppcDb(); if(!dbx) throw new Error('db');
+    const u=currentUser||{};
+    await dbx.collection('suggestions').add({
+      userId:u.id||'admin', name:u.name||'관리자', branch:u.branch||'관리자', role:u.role||u.type||'관리자', category, title, content, status:'접수', adminReply:'', createdAt:firebase.firestore.FieldValue.serverTimestamp(), updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+    });
+    document.getElementById('ppc-sug-title').value=''; document.getElementById('ppc-sug-content').value='';
+    showToast('건의사항이 접수되었습니다.','success');
+    setPPCSuggestionTab('my');
+  }catch(e){ console.error(e); showToast('건의사항 저장 실패','error'); }
+}
+async function renderPPCMySuggestions(){
+  const box=document.getElementById('ppc-suggestion-my-box'); if(!box) return;
+  box.innerHTML='<div class="ppc-card text-center text-slate-400 font-black text-xs">불러오는 중...</div>';
+  try{
+    const dbx=ppcDb(); if(!dbx) throw new Error('db');
+    const uid=(currentUser&&currentUser.id)||'admin';
+    const snap=await dbx.collection('suggestions').orderBy('createdAt','desc').limit(100).get();
+    const rows=[]; snap.forEach(doc=>{ const x={id:doc.id,...doc.data()}; if(x.userId===uid) rows.push(x); });
+    if(!rows.length){ box.innerHTML='<div class="ppc-card text-center text-slate-400 font-black text-xs">보낸 건의가 없습니다.</div>'; return; }
+    box.innerHTML=rows.map(s=>`<div class="ppc-card">
+      <div class="flex items-start justify-between gap-2"><div class="ppc-card-title">${ppcEsc(s.title)}</div><span class="ppc-status">${ppcEsc(s.status||'접수')}</span></div>
+      <div class="ppc-card-meta">${ppcEsc(s.category)} · ${ppcDateFmt(s.createdAt)}</div>
+      <div class="ppc-card-content">${ppcEsc(s.content)}</div>
+      ${s.adminReply?`<div class="mt-3 bg-blue-50 border border-blue-100 rounded-2xl p-3"><p class="text-[10px] font-black text-blue-600 mb-1">관리자 답변</p><div class="ppc-card-content">${ppcEsc(s.adminReply)}</div></div>`:''}
+    </div>`).join('');
+  }catch(e){ console.error(e); box.innerHTML='<div class="ppc-card text-center text-rose-500 font-black text-xs">건의함을 불러오지 못했습니다.</div>'; }
+}
+
+async function renderAdminNotices(){
+  const box=document.getElementById('admin-notice-list'); if(!box) return;
+  box.innerHTML=`<div class="ppc-card">
+    <p class="text-sm font-black text-slate-900 mb-3">공지 작성</p>
+    <input id="admin-notice-title" class="ppc-form-input" placeholder="공지 제목">
+    <textarea id="admin-notice-content" class="ppc-form-input mt-2" rows="5" placeholder="공지 내용을 입력하세요"></textarea>
+    <label class="flex items-center gap-2 mt-3 text-xs font-black text-slate-600"><input id="admin-notice-pinned" type="checkbox" class="w-4 h-4 accent-blue-700"> 상단 고정</label>
+    <button onclick="createAdminNotice()" class="ppc-primary-btn mt-3">공지 등록</button>
+  </div><div id="admin-notice-items" class="space-y-3"><div class="ppc-card text-center text-slate-400 font-black text-xs">불러오는 중...</div></div>`;
+  await loadAdminNoticeItems();
+}
+async function createAdminNotice(){
+  try{
+    const title=document.getElementById('admin-notice-title').value.trim(); const content=document.getElementById('admin-notice-content').value.trim(); const pinned=document.getElementById('admin-notice-pinned').checked;
+    if(!title || !content) return showToast('공지 제목과 내용을 입력해주세요.','error');
+    const dbx=ppcDb(); if(!dbx) throw new Error('db');
+    await dbx.collection('notices').add({title, content, pinned, visible:true, author:'관리자', createdAt:firebase.firestore.FieldValue.serverTimestamp(), updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+    showToast('공지 등록 완료','success'); await renderAdminNotices();
+  }catch(e){ console.error(e); showToast('공지 등록 실패','error'); }
+}
+async function loadAdminNoticeItems(){
+  const box=document.getElementById('admin-notice-items'); if(!box) return;
+  try{
+    const dbx=ppcDb(); const snap=await dbx.collection('notices').orderBy('createdAt','desc').limit(100).get(); const rows=[]; snap.forEach(doc=>rows.push({id:doc.id,...doc.data()}));
+    if(!rows.length){ box.innerHTML='<div class="ppc-card text-center text-slate-400 font-black text-xs">등록된 공지가 없습니다.</div>'; return; }
+    box.innerHTML=rows.map(n=>`<div class="ppc-card">
+      <div class="flex items-start justify-between gap-2"><div><div class="ppc-card-title">${ppcEsc(n.title)}</div><div class="ppc-card-meta">${ppcDateFmt(n.createdAt)} ${n.visible===false?'· 숨김':''}</div></div><span class="ppc-status">${n.pinned?'고정':'일반'}</span></div>
+      <div class="ppc-card-content">${ppcEsc(n.content)}</div>
+      <div class="flex gap-2 mt-3"><button class="ppc-small-btn" onclick="toggleAdminNoticeVisible('${n.id}', ${n.visible!==false})">${n.visible===false?'보이기':'숨기기'}</button><button class="ppc-danger-btn" onclick="deleteAdminNotice('${n.id}')">삭제</button></div>
+    </div>`).join('');
+  }catch(e){ console.error(e); box.innerHTML='<div class="ppc-card text-center text-rose-500 font-black text-xs">공지를 불러오지 못했습니다.</div>'; }
+}
+async function toggleAdminNoticeVisible(id, nowVisible){ try{ await ppcDb().collection('notices').doc(id).set({visible:!nowVisible, updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true}); await loadAdminNoticeItems(); }catch(e){ showToast('처리 실패','error'); } }
+async function deleteAdminNotice(id){ if(!confirm('이 공지를 삭제할까요?')) return; try{ await ppcDb().collection('notices').doc(id).delete(); await loadAdminNoticeItems(); showToast('삭제 완료','success'); }catch(e){ showToast('삭제 실패','error'); } }
+
+async function renderAdminSuggestions(){
+  const box=document.getElementById('admin-suggestion-list'); if(!box) return;
+  box.innerHTML='<div class="ppc-card text-center text-slate-400 font-black text-xs">불러오는 중...</div>';
+  try{
+    const snap=await ppcDb().collection('suggestions').orderBy('createdAt','desc').limit(200).get(); const rows=[]; snap.forEach(doc=>rows.push({id:doc.id,...doc.data()}));
+    if(!rows.length){ box.innerHTML='<div class="ppc-card text-center text-slate-400 font-black text-xs">접수된 건의가 없습니다.</div>'; return; }
+    box.innerHTML=rows.map(s=>`<div class="ppc-card">
+      <div class="flex items-start justify-between gap-2"><div><div class="ppc-card-title">${ppcEsc(s.title)}</div><div class="ppc-card-meta">${ppcEsc(s.branch||'-')} · ${ppcEsc(s.name||'-')} · ${ppcEsc(s.category||'-')} · ${ppcDateFmt(s.createdAt)}</div></div><span class="ppc-status">${ppcEsc(s.status||'접수')}</span></div>
+      <div class="ppc-card-content">${ppcEsc(s.content)}</div>
+      <label class="ppc-form-label">처리상태</label>
+      <select id="sug-status-${s.id}" class="ppc-form-input"><option ${s.status==='접수'?'selected':''}>접수</option><option ${s.status==='확인중'?'selected':''}>확인중</option><option ${s.status==='완료'?'selected':''}>완료</option></select>
+      <label class="ppc-form-label">관리자 답변</label>
+      <textarea id="sug-reply-${s.id}" class="ppc-form-input" rows="3" placeholder="답변을 입력하세요">${ppcEsc(s.adminReply||'')}</textarea>
+      <div class="flex gap-2 mt-3"><button class="ppc-small-btn" onclick="updateAdminSuggestion('${s.id}')">저장</button><button class="ppc-danger-btn" onclick="deleteAdminSuggestion('${s.id}')">삭제</button></div>
+    </div>`).join('');
+  }catch(e){ console.error(e); box.innerHTML='<div class="ppc-card text-center text-rose-500 font-black text-xs">건의함을 불러오지 못했습니다.</div>'; }
+}
+async function updateAdminSuggestion(id){ try{ const status=document.getElementById('sug-status-'+id).value; const adminReply=document.getElementById('sug-reply-'+id).value.trim(); await ppcDb().collection('suggestions').doc(id).set({status, adminReply, updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true}); showToast('저장 완료','success'); await renderAdminSuggestions(); }catch(e){ showToast('저장 실패','error'); } }
+async function deleteAdminSuggestion(id){ if(!confirm('이 건의를 삭제할까요?')) return; try{ await ppcDb().collection('suggestions').doc(id).delete(); showToast('삭제 완료','success'); await renderAdminSuggestions(); }catch(e){ showToast('삭제 실패','error'); } }
+
+/* 기존 관리자 탭 함수 확장 */
+showAdminTab = function(tab){
+  const ids=['admin-user-list','admin-login-log-list','admin-inactive-list','admin-branch-stats-list','admin-notice-list','admin-suggestion-list'];
+  ids.forEach(id=>{ const el=document.getElementById(id); if(el) el.classList.add('hidden'); });
+  const btns=['users','logs','inactive','stats','notices','suggestions'];
+  btns.forEach(k=>{ const b=document.getElementById('admin-tab-'+k); if(b) b.className='admin-tab-btn text-slate-500 px-3 py-3 rounded-xl text-xs font-black'; });
+  const active=document.getElementById('admin-tab-'+tab); if(active) active.className='admin-tab-btn bg-white text-indigo-600 shadow px-3 py-3 rounded-xl text-xs font-black';
+  const branch=document.getElementById('admin-branch-filter-wrap'); const search=document.getElementById('admin-user-search-wrap');
+  if(branch) branch.classList.toggle('hidden', tab==='notices' || tab==='suggestions');
+  if(search) search.classList.toggle('hidden', tab!=='users');
+  if(tab==='logs'){ const el=document.getElementById('admin-login-log-list'); if(el) el.classList.remove('hidden'); renderLoginLogPage(); }
+  else if(tab==='inactive'){ const el=document.getElementById('admin-inactive-list'); if(el) el.classList.remove('hidden'); renderInactiveStudentsPage(); }
+  else if(tab==='stats'){ const el=document.getElementById('admin-branch-stats-list'); if(el) el.classList.remove('hidden'); renderAdminBranchStats(); }
+  else if(tab==='notices'){ const el=document.getElementById('admin-notice-list'); if(el) el.classList.remove('hidden'); renderAdminNotices(); }
+  else if(tab==='suggestions'){ const el=document.getElementById('admin-suggestion-list'); if(el) el.classList.remove('hidden'); renderAdminSuggestions(); }
+  else { const el=document.getElementById('admin-user-list'); if(el) el.classList.remove('hidden'); renderAdminPage(); }
+};
+
+try{ document.addEventListener('DOMContentLoaded', function(){ setTimeout(updatePPCNoticeDot, 800); }); }catch(e){}
 </script>
 
 </body>
