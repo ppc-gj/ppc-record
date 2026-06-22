@@ -374,7 +374,7 @@ button[onclick="toggleAuthMode('signup')"]{
 
 <style id="ppc-notice-suggestion-style">
 .ppc-top-icon-btn{width:34px;height:34px;border:1px solid rgba(255,255,255,.25);border-radius:999px;background:rgba(255,255,255,.08);font-size:15px;font-weight:900;color:#fff;display:flex;align-items:center;justify-content:center;position:relative;}
-.ppc-top-icon-btn .dot{position:absolute;right:3px;top:3px;width:8px;height:8px;border-radius:999px;background:#ef4444;border:1px solid #fff;}
+.ppc-top-icon-btn .dot{position:absolute;right:-2px;top:-2px;min-width:16px;height:16px;padding:0 4px;border-radius:999px;background:#ef4444;border:1px solid #fff;color:#fff;font-size:9px;font-weight:1000;line-height:14px;text-align:center;display:flex;align-items:center;justify-content:center;}
 .ppc-modal-card{width:100%;max-width:390px;max-height:84vh;overflow:hidden;border-radius:28px;background:#fff;box-shadow:0 24px 70px rgba(15,23,42,.35);display:flex;flex-direction:column;}
 .ppc-modal-head{background:linear-gradient(135deg,#08266f,#1d4ed8);color:#fff;padding:18px 18px 14px;display:flex;align-items:center;justify-content:space-between;gap:12px;}
 .ppc-modal-title{font-size:18px;font-weight:1000;letter-spacing:-.04em;}
@@ -2807,7 +2807,7 @@ function downloadAdminUsersExcel() {
             <html><head><meta charset="UTF-8">
 <style id="ppc-notice-suggestion-style">
 .ppc-top-icon-btn{width:34px;height:34px;border:1px solid rgba(255,255,255,.25);border-radius:999px;background:rgba(255,255,255,.08);font-size:15px;font-weight:900;color:#fff;display:flex;align-items:center;justify-content:center;position:relative;}
-.ppc-top-icon-btn .dot{position:absolute;right:3px;top:3px;width:8px;height:8px;border-radius:999px;background:#ef4444;border:1px solid #fff;}
+.ppc-top-icon-btn .dot{position:absolute;right:-2px;top:-2px;min-width:16px;height:16px;padding:0 4px;border-radius:999px;background:#ef4444;border:1px solid #fff;color:#fff;font-size:9px;font-weight:1000;line-height:14px;text-align:center;display:flex;align-items:center;justify-content:center;}
 .ppc-modal-card{width:100%;max-width:390px;max-height:84vh;overflow:hidden;border-radius:28px;background:#fff;box-shadow:0 24px 70px rgba(15,23,42,.35);display:flex;flex-direction:column;}
 .ppc-modal-head{background:linear-gradient(135deg,#08266f,#1d4ed8);color:#fff;padding:18px 18px 14px;display:flex;align-items:center;justify-content:space-between;gap:12px;}
 .ppc-modal-title{font-size:18px;font-weight:1000;letter-spacing:-.04em;}
@@ -4773,28 +4773,80 @@ function ppcDate(v){
 }
 function ppcDateFmt(v){ const d=ppcDate(v); if(!d) return '-'; return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; }
 
+function ppcNoticeUserKey(){
+  try{
+    if(typeof currentUser !== 'undefined' && currentUser){
+      return 'user_' + (currentUser.docId || currentUser.id || currentUser.name || 'unknown');
+    }
+  }catch(e){}
+  try{ if(typeof isAdmin !== 'undefined' && isAdmin) return 'admin'; }catch(e){}
+  try{
+    let k=localStorage.getItem('ppc_notice_guest_key');
+    if(!k){ k='guest_'+Date.now()+'_'+Math.random().toString(36).slice(2,8); localStorage.setItem('ppc_notice_guest_key', k); }
+    return k;
+  }catch(e){ return 'guest'; }
+}
+async function getPPCReadNoticeMap(dbx){
+  const key=ppcNoticeUserKey();
+  try{
+    const doc=await dbx.collection('noticeReads').doc(key).get();
+    if(doc.exists){ const data=doc.data()||{}; return data.reads || {}; }
+  }catch(e){
+    try{ return JSON.parse(localStorage.getItem('ppc_notice_reads_'+key)||'{}') || {}; }catch(_){ return {}; }
+  }
+  try{ return JSON.parse(localStorage.getItem('ppc_notice_reads_'+key)||'{}') || {}; }catch(e){ return {}; }
+}
+async function savePPCReadNoticeMap(dbx, reads){
+  const key=ppcNoticeUserKey();
+  try{
+    await dbx.collection('noticeReads').doc(key).set({reads, updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
+  }catch(e){
+    try{ localStorage.setItem('ppc_notice_reads_'+key, JSON.stringify(reads)); }catch(_){}
+  }
+}
+async function markPPCNoticesRead(rows){
+  try{
+    const dbx=ppcDb(); if(!dbx || !rows || !rows.length) return;
+    const reads=await getPPCReadNoticeMap(dbx);
+    let changed=false;
+    rows.forEach(n=>{ if(n && n.id && !reads[n.id]){ reads[n.id]=true; changed=true; } });
+    if(changed) await savePPCReadNoticeMap(dbx, reads);
+    await updatePPCNoticeDot();
+  }catch(e){}
+}
 async function openPPCNoticeModal(){
   const modal=document.getElementById('ppc-notice-modal'); if(modal){ modal.classList.remove('hidden'); modal.classList.add('flex'); }
-  await renderPPCUserNotices();
+  await renderPPCUserNotices(true);
 }
 function closePPCNoticeModal(){ const modal=document.getElementById('ppc-notice-modal'); if(modal){ modal.classList.add('hidden'); modal.classList.remove('flex'); } }
-async function renderPPCUserNotices(){
+async function renderPPCUserNotices(markRead){
   const box=document.getElementById('ppc-notice-user-list'); if(!box) return;
   box.innerHTML='<div class="ppc-card text-center text-slate-400 font-black text-xs">불러오는 중...</div>';
   try{
     const dbx=ppcDb(); if(!dbx) throw new Error('db');
     const snap=await dbx.collection('notices').orderBy('createdAt','desc').limit(50).get();
     const rows=[]; snap.forEach(doc=>{ const x={id:doc.id,...doc.data()}; if(x.visible !== false) rows.push(x); });
-    if(!rows.length){ box.innerHTML='<div class="ppc-card text-center text-slate-400 font-black text-xs">등록된 공지가 없습니다.</div>'; return; }
+    if(!rows.length){ box.innerHTML='<div class="ppc-card text-center text-slate-400 font-black text-xs">등록된 공지가 없습니다.</div>'; await updatePPCNoticeDot(); return; }
+    const reads=await getPPCReadNoticeMap(dbx);
     box.innerHTML=rows.map(n=>`<div class="ppc-card">
-      <div class="flex items-start justify-between gap-2"><div class="ppc-card-title">${ppcEsc(n.title||'공지')}</div>${n.pinned?'<span class="ppc-status">고정</span>':''}</div>
+      <div class="flex items-start justify-between gap-2"><div class="ppc-card-title">${ppcEsc(n.title||'공지')}</div><div class="flex gap-1">${!reads[n.id]?'<span class="ppc-status" style="background:#fee2e2;color:#dc2626">NEW</span>':''}${n.pinned?'<span class="ppc-status">고정</span>':''}</div></div>
       <div class="ppc-card-meta">${ppcDateFmt(n.createdAt)}</div>
       <div class="ppc-card-content">${ppcEsc(n.content||'')}</div>
     </div>`).join('');
+    if(markRead) setTimeout(()=>markPPCNoticesRead(rows), 350);
   }catch(e){ console.error(e); box.innerHTML='<div class="ppc-card text-center text-rose-500 font-black text-xs">공지를 불러오지 못했습니다.</div>'; }
 }
 async function updatePPCNoticeDot(){
-  try{ const dot=document.getElementById('ppc-notice-dot'); if(!dot) return; const dbx=ppcDb(); if(!dbx) return; const snap=await dbx.collection('notices').orderBy('createdAt','desc').limit(1).get(); dot.classList.toggle('hidden', snap.empty); }catch(e){}
+  try{
+    const dot=document.getElementById('ppc-notice-dot'); if(!dot) return;
+    const dbx=ppcDb(); if(!dbx) return;
+    const snap=await dbx.collection('notices').orderBy('createdAt','desc').limit(50).get();
+    const rows=[]; snap.forEach(doc=>{ const x={id:doc.id,...doc.data()}; if(x.visible !== false) rows.push(x); });
+    const reads=await getPPCReadNoticeMap(dbx);
+    const unread=rows.filter(n=>n.id && !reads[n.id]).length;
+    dot.textContent = unread > 9 ? '9+' : (unread ? String(unread) : '');
+    dot.classList.toggle('hidden', unread <= 0);
+  }catch(e){}
 }
 
 function openPPCSuggestionModal(){ const modal=document.getElementById('ppc-suggestion-modal'); if(modal){ modal.classList.remove('hidden'); modal.classList.add('flex'); } setPPCSuggestionTab('write'); }
@@ -4859,7 +4911,7 @@ async function createAdminNotice(){
     if(!title || !content) return showToast('공지 제목과 내용을 입력해주세요.','error');
     const dbx=ppcDb(); if(!dbx) throw new Error('db');
     await dbx.collection('notices').add({title, content, pinned, visible:true, author:'관리자', createdAt:firebase.firestore.FieldValue.serverTimestamp(), updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
-    showToast('공지 등록 완료','success'); await renderAdminNotices();
+    showToast('공지 등록 완료','success'); await renderAdminNotices(); await updatePPCNoticeDot();
   }catch(e){ console.error(e); showToast('공지 등록 실패','error'); }
 }
 async function loadAdminNoticeItems(){
@@ -4874,8 +4926,8 @@ async function loadAdminNoticeItems(){
     </div>`).join('');
   }catch(e){ console.error(e); box.innerHTML='<div class="ppc-card text-center text-rose-500 font-black text-xs">공지를 불러오지 못했습니다.</div>'; }
 }
-async function toggleAdminNoticeVisible(id, nowVisible){ try{ await ppcDb().collection('notices').doc(id).set({visible:!nowVisible, updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true}); await loadAdminNoticeItems(); }catch(e){ showToast('처리 실패','error'); } }
-async function deleteAdminNotice(id){ if(!confirm('이 공지를 삭제할까요?')) return; try{ await ppcDb().collection('notices').doc(id).delete(); await loadAdminNoticeItems(); showToast('삭제 완료','success'); }catch(e){ showToast('삭제 실패','error'); } }
+async function toggleAdminNoticeVisible(id, nowVisible){ try{ await ppcDb().collection('notices').doc(id).set({visible:!nowVisible, updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true}); await loadAdminNoticeItems(); await updatePPCNoticeDot(); }catch(e){ showToast('처리 실패','error'); } }
+async function deleteAdminNotice(id){ if(!confirm('이 공지를 삭제할까요?')) return; try{ await ppcDb().collection('notices').doc(id).delete(); await loadAdminNoticeItems(); await updatePPCNoticeDot(); showToast('삭제 완료','success'); }catch(e){ showToast('삭제 실패','error'); } }
 
 async function renderAdminSuggestions(){
   const box=document.getElementById('admin-suggestion-list'); if(!box) return;
