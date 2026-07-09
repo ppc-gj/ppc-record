@@ -1157,6 +1157,7 @@ button[onclick="toggleAuthMode('signup')"]{
 
                 initApp();
                 showView('measure');
+                await saveDailyLoginLog(user, 'auto');
             } catch(error) {
                 console.error('자동 로그인 복원 실패', error);
                 clearStudentAutoLogin();
@@ -1270,7 +1271,7 @@ button[onclick="toggleAuthMode('signup')"]{
                     
                     initApp();
                     showView('measure');
-                    await saveLoginLog(user);
+                    await saveDailyLoginLog(user, 'manual');
                     showToast(`환영합니다, ${user.name}님!`, 'success');
                 } else {
                     showToast('아이디 또는 비밀번호가 틀렸습니다.', 'error');
@@ -2160,8 +2161,16 @@ function escapeHtml(value) {
     });
 }
 
-async function saveLoginLog(user) {
+function getPPCLoginDateKey(date = new Date()) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+}
+
+async function saveLoginLog(user, source = 'manual') {
     try {
+        const todayKey = getPPCLoginDateKey();
         const payload = {
             userId: user.id || '',
             userName: user.name || '',
@@ -2170,14 +2179,57 @@ async function saveLoginLog(user) {
             type: user.type || '',
             phone: user.phone || '',
             college: user.college || '',
+            loginDateKey: todayKey,
+            loginSource: source,
             loggedAt: firebase.firestore.FieldValue.serverTimestamp()
         };
         await db.collection('loginLogs').add(payload);
         await db.collection('users').doc(user.docId || getUserDocId(user.id)).set({
-            lastLoginAt: firebase.firestore.FieldValue.serverTimestamp()
+            lastLoginAt: firebase.firestore.FieldValue.serverTimestamp(),
+            lastLoginDateKey: todayKey
         }, { merge: true });
     } catch(error) {
         console.warn('로그인 기록 저장 실패', error);
+    }
+}
+
+async function saveDailyLoginLog(user, source = 'auto') {
+    try {
+        if(!user || !user.id) return;
+        const todayKey = getPPCLoginDateKey();
+        const sessionKey = `ppcLoginLogSaved:${user.id}`;
+        if(sessionStorage.getItem(sessionKey) === todayKey) return;
+
+        // 같은 학생이 같은 날짜에 여러 번 앱을 열어도 로그인 기록은 1개만 남도록 날짜별 고정 문서 ID 사용
+        const safeUserId = String(user.id).replace(/[\/#\[\]\s]/g, '_');
+        const logDocId = `${safeUserId}_${todayKey}`;
+        const logRef = db.collection('loginLogs').doc(logDocId);
+        const existing = await logRef.get();
+
+        if(!existing.exists) {
+            const payload = {
+                userId: user.id || '',
+                userName: user.name || '',
+                school: user.school || '',
+                grade: user.grade || '',
+                type: user.type || '',
+                phone: user.phone || '',
+                college: user.college || '',
+                loginDateKey: todayKey,
+                loginSource: source,
+                loggedAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+            await logRef.set(payload);
+        }
+
+        await db.collection('users').doc(user.docId || getUserDocId(user.id)).set({
+            lastLoginAt: firebase.firestore.FieldValue.serverTimestamp(),
+            lastLoginDateKey: todayKey
+        }, { merge: true });
+        sessionStorage.setItem(sessionKey, todayKey);
+    } catch(error) {
+        console.warn('하루 1회 로그인 기록 확인 실패, 기본 기록 저장으로 대체', error);
+        await saveLoginLog(user, source);
     }
 }
 
