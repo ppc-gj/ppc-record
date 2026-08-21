@@ -2535,8 +2535,8 @@ function makeLoginLogCards(filteredLogs) {
             <div class="flex justify-between gap-3 items-start">
                 <div class="min-w-0">
                     <button type="button"
-                            onclick="openAdminBestByDocId(decodeURIComponent('${encodeURIComponent(String(log.userId || log.userName || ''))}'))"
-                            class="block max-w-full text-left font-black text-lg text-blue-700 hover:text-blue-900 active:scale-[0.98] truncate underline decoration-blue-200 underline-offset-4"
+                            data-login-best-key="${escapeHtml(log.userId || log.userName || '')}"
+                            class="ppc-login-best-link block max-w-full text-left font-black text-lg text-blue-700 hover:text-blue-900 active:scale-[0.98] truncate underline decoration-blue-200 underline-offset-4"
                             title="BEST 기록 보기">${escapeHtml(log.userName || '-')}</button>
                     <p class="text-xs font-bold text-slate-400 mt-1">ID: ${escapeHtml(log.userId || '-')} · 이름을 누르면 BEST 기록</p>
                 </div>
@@ -5283,5 +5283,52 @@ try{ document.addEventListener('DOMContentLoaded', function(){ setTimeout(update
 })();
 </script>
 
+
+<script id="ppc-login-log-best-click-final">
+(function(){
+  async function openBestFromLoginKey(key){
+    key = String(key || '').trim();
+    if(!key) return;
+
+    try{
+      // 로그인기록의 userId를 실제 회원 문서 ID로 최대한 정확하게 연결
+      if(typeof loadUsersFromFirestore === 'function') await loadUsersFromFirestore();
+    }catch(e){}
+
+    let target = null;
+    try{
+      const arr = (typeof users !== 'undefined' && Array.isArray(users)) ? users : [];
+      target = arr.find(u =>
+        String(u.id || '') === key ||
+        String(u.docId || '') === key ||
+        String(u.name || '') === key
+      ) || null;
+    }catch(e){}
+
+    const bestKey = target ? (target.docId || target.id || target.name) : key;
+
+    if(typeof window.openAdminBestByDocId === 'function'){
+      await window.openAdminBestByDocId(bestKey);
+      return;
+    }
+    if(typeof window.openAdminStudentBestModal === 'function'){
+      await window.openAdminStudentBestModal(bestKey);
+      return;
+    }
+    if(typeof showToast === 'function') showToast('BEST 기록 기능을 불러오지 못했습니다.', 'error');
+  }
+
+  // 로그인기록은 매번 다시 렌더링되므로 이벤트 위임으로 처리
+  document.addEventListener('click', function(e){
+    const btn = e.target.closest('.ppc-login-best-link');
+    if(!btn) return;
+    e.preventDefault();
+    e.stopPropagation();
+    openBestFromLoginKey(btn.dataset.loginBestKey);
+  });
+
+  window.openBestFromLoginLog = openBestFromLoginKey;
+})();
+</script>
 </body>
 </html>
