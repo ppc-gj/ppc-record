@@ -2534,8 +2534,11 @@ function makeLoginLogCards(filteredLogs) {
         <div class="bg-white rounded-[2rem] p-5 shadow-sm border border-slate-100 space-y-3">
             <div class="flex justify-between gap-3 items-start">
                 <div class="min-w-0">
-                    <h3 class="font-black text-lg text-slate-900 truncate">${escapeHtml(log.userName || '-')}</h3>
-                    <p class="text-xs font-bold text-slate-400 mt-1">ID: ${escapeHtml(log.userId || '-')}</p>
+                    <button type="button"
+                            onclick="openAdminBestByDocId(decodeURIComponent('${encodeURIComponent(String(log.userId || log.userName || ''))}'))"
+                            class="block max-w-full text-left font-black text-lg text-blue-700 hover:text-blue-900 active:scale-[0.98] truncate underline decoration-blue-200 underline-offset-4"
+                            title="BEST 기록 보기">${escapeHtml(log.userName || '-')}</button>
+                    <p class="text-xs font-bold text-slate-400 mt-1">ID: ${escapeHtml(log.userId || '-')} · 이름을 누르면 BEST 기록</p>
                 </div>
                 <div class="shrink-0 bg-blue-50 text-blue-800 px-3 py-1.5 rounded-full text-[11px] font-black">
                     로그인
