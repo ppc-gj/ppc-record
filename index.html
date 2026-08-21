@@ -453,7 +453,7 @@ button[onclick="toggleAuthMode('signup')"]{
                 </label>
                 <div class="ppc-login-options">
                     <label class="ppc-check"><input type="checkbox" id="remember-id">아이디 저장</label>
-                    <button type="button" class="ppc-find" onclick="showToast('관리자에게 문의해주세요')">비밀번호 찾기</button>
+                    <button type="button" class="ppc-find" onclick="openAccountRecovery()">아이디/비밀번호 찾기</button>
                 </div>
                 <button onclick="handleLogin()" class="ppc-login-main-btn">로그인</button>
                 <div class="ppc-divider">또는</div>
@@ -1223,26 +1223,38 @@ button[onclick="toggleAuthMode('signup')"]{
 
         // Handle Signup process
         async function handleSignup() {
+            const signupBtn = document.querySelector('button[onclick="handleSignup()"]');
+            if(signupBtn && signupBtn.dataset.saving === '1') return;
+            if(signupBtn){
+                signupBtn.dataset.saving = '1';
+                signupBtn.disabled = true;
+                signupBtn.textContent = '가입 처리 중...';
+            }
+
+            let accountCreated = false;
             try {
                 const fields = ['reg-id', 'reg-pw', 'reg-name', 'reg-branch', 'reg-role', 'reg-school', 'reg-grade', 'reg-gender', 'reg-type', 'reg-college', 'reg-phone'];
                 const data = {};
                 
                 for(let f of fields) {
-                    const val = document.getElementById(f).value.trim();
+                    const el = document.getElementById(f);
+                    const val = el ? String(el.value || '').trim() : '';
                     data[f.split('-')[1]] = val;
                 }
 
                 data.role = data.role || '학생';
 
                 if(!data.id || !data.pw || !data.name || !data.gender || !data.branch) {
-                    return showToast('이름, 아이디, 비밀번호, 성별, 지점은 필수 항목입니다.', 'error');
+                    showToast('이름, 아이디, 비밀번호, 성별, 지점은 필수 항목입니다.', 'error');
+                    return;
                 }
                 
                 const docId = getUserDocId(data.id);
                 const userDoc = await db.collection('users').doc(docId).get();
 
                 if(userDoc.exists) {
-                    return showToast('이미 사용중인 아이디입니다.', 'error');
+                    showToast('이미 사용중인 아이디입니다. 바로 로그인해주세요.', 'error');
+                    return;
                 }
 
                 data.records = []; 
@@ -1250,16 +1262,31 @@ button[onclick="toggleAuthMode('signup')"]{
                 data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
                 data.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
                 
+                // 실제 계정 생성 성공 여부는 이 쓰기 작업만으로 판단합니다.
                 await db.collection('users').doc(docId).set(data);
-                await loadUsersFromFirestore();
+                accountCreated = true;
+
+                // 목록 갱신 실패가 나더라도 이미 생성된 계정을 '가입 실패'로 안내하지 않도록 분리
+                try { await loadUsersFromFirestore(); }
+                catch(refreshError) { console.warn('회원가입 후 회원목록 갱신 실패', refreshError); }
 
                 showToast('회원가입이 완료되었습니다! 로그인해주세요.', 'success');
-                
-                fields.forEach(f => document.getElementById(f).value = '');
+                fields.forEach(f => { const el = document.getElementById(f); if(el) el.value = ''; });
                 toggleAuthMode('login');
             } catch (error) {
                 console.error(error);
-                showToast('회원가입 실패: Firebase 설정 또는 인터넷 연결을 확인해주세요.', 'error');
+                if(accountCreated) {
+                    showToast('회원가입은 완료되었습니다. 로그인해주세요.', 'success');
+                    toggleAuthMode('login');
+                } else {
+                    showToast('회원가입 실패: 인터넷 연결을 확인한 뒤 다시 시도해주세요.', 'error');
+                }
+            } finally {
+                if(signupBtn){
+                    signupBtn.dataset.saving = '0';
+                    signupBtn.disabled = false;
+                    signupBtn.textContent = '가입 완료';
+                }
             }
         }
 
@@ -2146,15 +2173,33 @@ button[onclick="toggleAuthMode('signup')"]{
             if(!currentUser || !currentUser.id) return;
 
             const docId = currentUser.docId || getUserDocId(currentUser.id);
-            const dataToSave = { ...currentUser };
-            delete dataToSave.docId;
+
+            // 학생 앱의 기록 저장이 관리자가 바꾼 회원정보(특히 지점)를 예전 값으로 덮어쓰지 않도록
+            // 기록/실기 관련 데이터만 저장합니다.
+            const dataToSave = {};
+            const studentDataFields = [
+                'records', 'extraEvents', 'selectedEvents', 'favorites',
+                'bestRecords', 'measurements', 'scores', 'settings'
+            ];
+            studentDataFields.forEach(key => {
+                if(Object.prototype.hasOwnProperty.call(currentUser, key)) dataToSave[key] = currentUser[key];
+            });
             dataToSave.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
 
             await db.collection('users').doc(docId).set(dataToSave, { merge: true });
             currentUser.docId = docId;
 
-            const index = users.findIndex(u => u.docId === docId || u.id === currentUser.id);
-            if(index !== -1) users[index] = currentUser;
+            // Firestore의 최신 관리자 수정값을 다시 읽어서 현재 세션에도 반영
+            try {
+                const freshDoc = await db.collection('users').doc(docId).get();
+                if(freshDoc.exists) {
+                    currentUser = { docId: freshDoc.id, ...freshDoc.data() };
+                    const index = users.findIndex(u => u.docId === docId || u.id === currentUser.id);
+                    if(index !== -1) users[index] = currentUser;
+                }
+            } catch(refreshError) {
+                console.warn('최신 회원정보 재조회 실패', refreshError);
+            }
         }
 
 function formatAdminDate(value) {
@@ -4197,7 +4242,7 @@ async function openAdminBestByDocId(docId){
   document.addEventListener('DOMContentLoaded', function(){
     forceBranchToGyeongju();
     setTimeout(forceBranchToGyeongju, 1000);
-    setInterval(forceBranchToGyeongju, 3000);
+    // 반복 강제 보정 제거: 기존 빈 지점만 시작 시 1회 보정
   });
 })();
 </script>
@@ -5155,6 +5200,84 @@ showAdminTab = function(tab){
 };
 
 try{ document.addEventListener('DOMContentLoaded', function(){ setTimeout(updatePPCNoticeDot, 800); }); }catch(e){}
+</script>
+
+
+<!-- 아이디 / 비밀번호 찾기 모달 -->
+<div id="account-recovery-modal" class="hidden fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-[1500] p-4 flex items-center justify-center">
+  <div class="bg-white w-full max-w-md rounded-[2rem] shadow-2xl overflow-hidden max-h-[92vh] flex flex-col">
+    <div class="bg-gradient-to-br from-blue-900 to-blue-700 text-white p-5 flex items-start justify-between gap-3">
+      <div><p class="text-[10px] font-black text-blue-100 uppercase tracking-widest mb-1">Account Recovery</p><h3 class="text-2xl font-black">아이디/비밀번호 찾기</h3></div>
+      <button type="button" onclick="closeAccountRecovery()" class="w-9 h-9 rounded-full bg-white/15 border border-white/25 text-white font-black">×</button>
+    </div>
+    <div class="p-5 bg-slate-50 overflow-y-auto space-y-4">
+      <div class="grid grid-cols-2 gap-2 bg-slate-200 p-1 rounded-xl">
+        <button id="recovery-tab-id" type="button" onclick="setRecoveryTab('id')" class="bg-white text-blue-700 shadow rounded-lg py-2.5 text-xs font-black">아이디 찾기</button>
+        <button id="recovery-tab-pw" type="button" onclick="setRecoveryTab('pw')" class="text-slate-500 rounded-lg py-2.5 text-xs font-black">비밀번호 재설정</button>
+      </div>
+      <div id="recovery-id-panel" class="space-y-3">
+        <p class="text-xs font-bold text-slate-500">가입할 때 입력한 이름과 휴대폰번호를 입력하세요.</p>
+        <input id="recovery-id-name" class="form-input" type="text" placeholder="이름">
+        <input id="recovery-id-phone" class="form-input" type="tel" placeholder="휴대폰번호 (예: 01012345678)">
+        <button type="button" onclick="findAccountId()" class="w-full bg-blue-700 text-white py-3.5 rounded-2xl text-sm font-black">아이디 찾기</button>
+        <div id="recovery-id-result" class="hidden bg-blue-50 border border-blue-100 rounded-2xl p-4 text-center"></div>
+      </div>
+      <div id="recovery-pw-panel" class="hidden space-y-3">
+        <p class="text-xs font-bold text-slate-500">이름, 아이디, 휴대폰번호가 모두 일치하면 새 비밀번호로 변경할 수 있습니다.</p>
+        <input id="recovery-pw-name" class="form-input" type="text" placeholder="이름">
+        <input id="recovery-pw-id" class="form-input" type="text" placeholder="아이디">
+        <input id="recovery-pw-phone" class="form-input" type="tel" placeholder="휴대폰번호 (예: 01012345678)">
+        <input id="recovery-new-pw" class="form-input" type="password" placeholder="새 비밀번호">
+        <input id="recovery-new-pw2" class="form-input" type="password" placeholder="새 비밀번호 확인">
+        <button type="button" onclick="resetAccountPassword()" class="w-full bg-blue-700 text-white py-3.5 rounded-2xl text-sm font-black">비밀번호 변경</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script id="ppc-account-recovery-script">
+(function(){
+  function byId(id){ return document.getElementById(id); }
+  function normPhone(v){ return String(v||'').replace(/\D/g,''); }
+  function toast(msg,type){ if(typeof showToast==='function') showToast(msg,type||'info'); else alert(msg); }
+  window.openAccountRecovery=function(){ const m=byId('account-recovery-modal'); if(m){m.classList.remove('hidden'); setRecoveryTab('id');} };
+  window.closeAccountRecovery=function(){ const m=byId('account-recovery-modal'); if(m)m.classList.add('hidden'); };
+  window.setRecoveryTab=function(tab){
+    const isId=tab==='id';
+    byId('recovery-id-panel').classList.toggle('hidden',!isId); byId('recovery-pw-panel').classList.toggle('hidden',isId);
+    byId('recovery-tab-id').className=(isId?'bg-white text-blue-700 shadow ':'text-slate-500 ')+'rounded-lg py-2.5 text-xs font-black';
+    byId('recovery-tab-pw').className=(!isId?'bg-white text-blue-700 shadow ':'text-slate-500 ')+'rounded-lg py-2.5 text-xs font-black';
+  };
+  window.findAccountId=async function(){
+    const name=byId('recovery-id-name').value.trim(), phone=normPhone(byId('recovery-id-phone').value), result=byId('recovery-id-result');
+    result.classList.add('hidden');
+    if(!name||!phone) return toast('이름과 휴대폰번호를 입력해주세요.','error');
+    try{
+      const snap=await db.collection('users').get();
+      const matches=[]; snap.forEach(doc=>{const u=doc.data()||{}; if(u.id!=='ppc'&&u.id!=='admin'&&String(u.name||'').trim()===name&&normPhone(u.phone)===phone) matches.push(u);});
+      if(!matches.length) return toast('일치하는 회원정보가 없습니다.','error');
+      const ids=[...new Set(matches.map(u=>u.id).filter(Boolean))];
+      result.innerHTML='<p class="text-[11px] font-black text-blue-500 mb-1">가입된 아이디</p><p class="text-lg font-black text-slate-900">'+ids.map(x=>String(x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))).join('<br>')+'</p>';
+      result.classList.remove('hidden');
+    }catch(e){ console.error(e); toast('회원정보를 확인하지 못했습니다. 인터넷 연결을 확인해주세요.','error'); }
+  };
+  window.resetAccountPassword=async function(){
+    const name=byId('recovery-pw-name').value.trim(), id=byId('recovery-pw-id').value.trim(), phone=normPhone(byId('recovery-pw-phone').value);
+    const pw=byId('recovery-new-pw').value, pw2=byId('recovery-new-pw2').value;
+    if(!name||!id||!phone||!pw||!pw2) return toast('모든 항목을 입력해주세요.','error');
+    if(pw.length<4) return toast('새 비밀번호는 4자 이상 입력해주세요.','error');
+    if(pw!==pw2) return toast('새 비밀번호가 서로 일치하지 않습니다.','error');
+    try{
+      const docId=typeof getUserDocId==='function'?getUserDocId(id):encodeURIComponent(id); const ref=db.collection('users').doc(docId); const doc=await ref.get();
+      if(!doc.exists) return toast('일치하는 회원정보가 없습니다.','error');
+      const u=doc.data()||{};
+      if(String(u.name||'').trim()!==name||normPhone(u.phone)!==phone) return toast('이름, 아이디 또는 휴대폰번호가 일치하지 않습니다.','error');
+      await ref.update({pw:pw,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+      toast('비밀번호가 변경되었습니다. 새 비밀번호로 로그인해주세요.','success');
+      byId('login-id').value=id; byId('login-pw').value=''; closeAccountRecovery();
+    }catch(e){ console.error(e); toast('비밀번호 변경에 실패했습니다. 인터넷 연결을 확인해주세요.','error'); }
+  };
+})();
 </script>
 
 </body>
