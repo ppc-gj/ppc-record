@@ -3987,89 +3987,8 @@ async function openAdminBestByDocId(docId){
 </script>
 
 
-<script id="ppc-branch-final-patch">
-(function(){
-  async function migrateExistingUsersBranch(){
-    try{
-      if(typeof users !== 'undefined' && Array.isArray(users)){
-        let changed = false;
-        users.forEach(u => {
-          if(u && !u.branch){
-            u.branch = '경주';
-            changed = true;
-          }
-        });
-        if(changed){
-          try{ localStorage.setItem('users', JSON.stringify(users)); }catch(e){}
-          try{ localStorage.setItem('ppcUsers', JSON.stringify(users)); }catch(e){}
-        }
-      }
-
-      if(typeof db !== 'undefined' && db && db.collection){
-        const snap = await db.collection('users').get();
-        const batch = db.batch();
-        let count = 0;
-        snap.forEach(doc => {
-          const data = doc.data() || {};
-          if(!data.branch){
-            batch.update(doc.ref, { branch: '경주' });
-            count++;
-          }
-        });
-        if(count > 0) await batch.commit();
-      }
-    }catch(e){ console.warn('branch migration skipped', e); }
-  }
-
-  const originalHandleSignup = window.handleSignup;
-  if(typeof originalHandleSignup === 'function' && !window.__ppcBranchSignupWrapped){
-    window.__ppcBranchSignupWrapped = true;
-    window.handleSignup = function(){
-      const branchEl = document.getElementById('reg-branch');
-      const branch = branchEl ? branchEl.value : '';
-
-      if(!branch){
-        if(typeof showToast === 'function') showToast('지점을 선택해주세요.', 'error');
-        else alert('지점을 선택해주세요.');
-        return;
-      }
-
-      window.__selectedBranchForSignup = branch;
-      const result = originalHandleSignup.apply(this, arguments);
-      setTimeout(migrateExistingUsersBranch, 800);
-      return result;
-    };
-  }
-
-  // Firestore set/add 저장 직후 branch 누락 시 보정
-  const originalShowToast = window.showToast;
-  window.__ensureBranchAfterSignup = function(){
-    setTimeout(async () => {
-      await migrateExistingUsersBranch();
-    }, 1200);
-  };
-
-  function addBranchToAdminCards(){
-    try{
-      const list = document.getElementById('admin-user-list');
-      if(!list) return;
-      const currentUsers = (typeof users !== 'undefined' && Array.isArray(users)) ? users : [];
-      Array.from(list.children).forEach((card, idx) => {
-        if(card.dataset.branchShown === '1') return;
-        const text = card.innerText || '';
-        const u = currentUsers.find(x => (x.name && text.includes(x.name)) || (x.id && text.includes(x.id))) || currentUsers[idx];
-        const branch = (u && u.branch) || '경주';
-        /* 지점 중복 표시 방지: 별도 뱃지 추가 제거 */
-        card.dataset.branchShown = '1';
-      });
-    }catch(e){}
-  }
-
-  document.addEventListener('DOMContentLoaded', function(){
-    migrateExistingUsersBranch();
-    setInterval(addBranchToAdminCards, 1000);
-  });
-})();
+<script id="ppc-branch-final-patch-disabled">
+/* 자동 지점 보정 비활성화: 기존 회원의 지점을 경주로 강제/보정하지 않습니다. */
 </script>
 
 
@@ -4159,99 +4078,8 @@ async function openAdminBestByDocId(docId){
 </script>
 
 
-<script id="ppc-branch-migration-force-final">
-(function(){
-  async function forceBranchToGyeongju(){
-    try{
-      // 1) 메모리 users 배열 보정
-      if(typeof users !== 'undefined' && Array.isArray(users)){
-        let changed = false;
-        users.forEach(u => {
-          if(u && !u.branch){
-            u.branch = '경주';
-            changed = true;
-          }
-        });
-        if(changed){
-          try{ localStorage.setItem('users', JSON.stringify(users)); }catch(e){}
-          try{ localStorage.setItem('ppcUsers', JSON.stringify(users)); }catch(e){}
-        }
-      }
-
-      // 2) localStorage에 저장된 회원 데이터 보정
-      ['users','ppcUsers','PPC_USERS','students','members'].forEach(key => {
-        try{
-          const raw = localStorage.getItem(key);
-          if(!raw) return;
-          const data = JSON.parse(raw);
-          let changed = false;
-
-          if(Array.isArray(data)){
-            data.forEach(u => {
-              if(u && !u.branch){
-                u.branch = '경주';
-                changed = true;
-              }
-            });
-          }else if(data && typeof data === 'object'){
-            Object.values(data).forEach(u => {
-              if(u && typeof u === 'object' && !u.branch){
-                u.branch = '경주';
-                changed = true;
-              }
-            });
-          }
-
-          if(changed) localStorage.setItem(key, JSON.stringify(data));
-        }catch(e){}
-      });
-
-      // 3) Firebase users 컬렉션 보정
-      try{
-        if(typeof db !== 'undefined' && db && db.collection){
-          const snap = await db.collection('users').get();
-          const batch = db.batch();
-          let count = 0;
-          snap.forEach(doc => {
-            const data = doc.data() || {};
-            if(!data.branch){
-              batch.update(doc.ref, { branch: '경주' });
-              count++;
-            }
-          });
-          if(count > 0) await batch.commit();
-        }
-      }catch(e){
-        console.warn('Firebase branch migration skipped', e);
-      }
-
-      // 4) 현재 화면 카드에서 지점 값이 비어 있으면 경주로 표시
-      document.querySelectorAll('#admin-user-list .bg-slate-50').forEach(box => {
-        const label = box.querySelector('p.text-slate-400');
-        const value = box.querySelector('p.font-bold');
-        if(label && value && label.textContent.trim() === '지점' && !value.textContent.trim()){
-          value.textContent = '경주';
-        }
-      });
-
-      document.querySelectorAll('#admin-user-list > *').forEach(card => {
-        if(!card.dataset.branch) card.dataset.branch = '경주';
-      });
-
-      if(typeof applyAdminBranchFilter === 'function') applyAdminBranchFilter();
-    }catch(e){
-      console.warn('branch force patch error', e);
-    }
-  }
-
-  window.forceBranchToGyeongju = forceBranchToGyeongju;
-
-  document.addEventListener('DOMContentLoaded', function(){
-    forceBranchToGyeongju();
-    setTimeout(forceBranchToGyeongju, 1000);
-    // 반복 강제 보정 제거: 기존 빈 지점만 시작 시 1회 보정
-  });
-})();
+<script id="ppc-branch-migration-force-final-disabled">
+/* 자동 지점 보정 비활성화: 기존 회원의 지점을 경주로 강제/보정하지 않습니다. */
 </script>
 
 
@@ -4467,7 +4295,7 @@ async function openAdminBestByDocId(docId){
     const docId = document.getElementById('admin-edit-docid').value;
     const updated = {
       name: document.getElementById('admin-edit-name').value.trim(),
-      branch: document.getElementById('admin-edit-branch').value || '경주',
+      branch: (document.getElementById('admin-edit-branch').value || '').trim(),
       role: document.getElementById('admin-edit-role').value || '학생',
       school: document.getElementById('admin-edit-school').value.trim(),
       grade: document.getElementById('admin-edit-grade').value,
@@ -4479,6 +4307,12 @@ async function openAdminBestByDocId(docId){
       pw: document.getElementById('admin-edit-pw').value.trim()
     };
 
+    if(!updated.branch){
+      if(typeof showToast === 'function') showToast('지점을 반드시 선택해주세요.', 'error');
+      else alert('지점을 반드시 선택해주세요.');
+      return;
+    }
+
     if(!updated.name || !updated.id || !updated.pw){
       if(typeof showToast === 'function') showToast('이름, 아이디, 비밀번호는 필수입니다.', 'error');
       else alert('이름, 아이디, 비밀번호는 필수입니다.');
@@ -4489,18 +4323,24 @@ async function openAdminBestByDocId(docId){
       const dbx = getDb();
       if(dbx && docId){
         const ref = dbx.collection('users').doc(docId);
-        await ref.update(updated);
+        // 회원정보를 문서에 병합 저장. 지점은 사용자가 선택한 값 그대로 확정 저장합니다.
+        await ref.set({
+          ...updated,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
 
-        // 지점이 다른 값으로 덮어써지는 문제 방지:
-        // 저장 직후 실제 Firestore 값을 다시 확인하고 선택값과 다르면 한 번 더 확정 저장
-        const verifySnap = await ref.get();
-        if(verifySnap.exists){
-          const verifyData = verifySnap.data() || {};
-          if(String(verifyData.branch || '') !== String(updated.branch || '')){
-            await ref.update({
-              branch: updated.branch,
-              updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
+        // 저장 직후 Firestore 실제값 확인. 다른 값이면 재저장 후 다시 검증합니다.
+        let verifySnap = await ref.get();
+        let verifyData = verifySnap.exists ? (verifySnap.data() || {}) : {};
+        if(String(verifyData.branch || '') !== String(updated.branch)){
+          await ref.set({
+            branch: updated.branch,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+          }, { merge: true });
+          verifySnap = await ref.get();
+          verifyData = verifySnap.exists ? (verifySnap.data() || {}) : {};
+          if(String(verifyData.branch || '') !== String(updated.branch)){
+            throw new Error('BRANCH_SAVE_VERIFY_FAILED');
           }
         }
       }
@@ -4529,8 +4369,11 @@ async function openAdminBestByDocId(docId){
       }
     }catch(error){
       console.error(error);
-      if(typeof showToast === 'function') showToast('수정 저장에 실패했습니다.', 'error');
-      else alert('수정 저장에 실패했습니다.');
+      const msg = (error && error.message === 'BRANCH_SAVE_VERIFY_FAILED')
+        ? '지점 저장 확인에 실패했습니다. Firebase 권한/데이터를 확인해주세요.'
+        : '수정 저장에 실패했습니다.';
+      if(typeof showToast === 'function') showToast(msg, 'error');
+      else alert(msg);
     }
   };
 })();
