@@ -406,6 +406,17 @@ button[onclick="toggleAuthMode('signup')"]{
 .ppc-admission-result-title{font-size:10px;font-weight:1000;color:#bfdbfe;margin-bottom:.25rem;letter-spacing:-.02em;}
 .ppc-admission-result-text{font-size:12px;font-weight:800;color:#eff6ff;line-height:1.55;white-space:pre-line;letter-spacing:-.03em;}
 </style>
+
+    <!-- PWA install support: existing UI/design unchanged -->
+    <meta name="theme-color" content="#f8fafc">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="PPC 실기관리">
+    <link rel="manifest" href="./manifest.webmanifest">
+    <link rel="icon" type="image/png" sizes="192x192" href="./ppc-icon-192.png">
+    <link rel="apple-touch-icon" href="./ppc-icon-192.png">
+
 </head>
 <body class="max-w-md mx-auto min-h-screen shadow-2xl relative bg-slate-50 overflow-x-hidden">
 
@@ -2987,7 +2998,17 @@ function downloadAdminUsersExcel() {
 </style>
 </head><body>
             <table border="1">${tableRows}</table>
-            </body></html>
+            
+<script id="ppc-pwa-register">
+if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('./sw.js').catch(function (err) {
+      console.warn('PPC service worker registration failed:', err);
+    });
+  });
+}
+</script>
+</body></html>
         `;
         const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
