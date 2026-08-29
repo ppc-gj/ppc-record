@@ -416,7 +416,6 @@ button[onclick="toggleAuthMode('signup')"]{
     <link rel="manifest" href="./manifest.webmanifest">
     <link rel="icon" type="image/png" sizes="192x192" href="./ppc-icon-192.png">
     <link rel="apple-touch-icon" href="./ppc-icon-192.png">
-
 </head>
 <body class="max-w-md mx-auto min-h-screen shadow-2xl relative bg-slate-50 overflow-x-hidden">
 
@@ -2998,17 +2997,7 @@ function downloadAdminUsersExcel() {
 </style>
 </head><body>
             <table border="1">${tableRows}</table>
-            
-<script id="ppc-pwa-register">
-if ('serviceWorker' in navigator && location.protocol !== 'file:') {
-  window.addEventListener('load', function () {
-    navigator.serviceWorker.register('./sw.js').catch(function (err) {
-      console.warn('PPC service worker registration failed:', err);
-    });
-  });
-}
-</script>
-</body></html>
+            </body></html>
         `;
         const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
@@ -5211,6 +5200,16 @@ try{ document.addEventListener('DOMContentLoaded', function(){ setTimeout(update
 
   window.openBestFromLoginLog = openBestFromLoginKey;
 })();
+</script>
+
+<script id="ppc-pwa-register">
+if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).catch(function (err) {
+      console.warn('PPC service worker registration failed:', err);
+    });
+  });
+}
 </script>
 </body>
 </html>
