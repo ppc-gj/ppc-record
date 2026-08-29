@@ -5202,6 +5202,124 @@ try{ document.addEventListener('DOMContentLoaded', function(){ setTimeout(update
 })();
 </script>
 
+<style id="ppc-pwa-install-prompt-style">
+#ppc-pwa-install-prompt{
+  display:none;
+  position:fixed;
+  inset:0;
+  z-index:99999;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+  background:rgba(15,23,42,.58);
+  backdrop-filter:blur(5px);
+}
+#ppc-pwa-install-prompt.show{display:flex;}
+#ppc-pwa-install-card{
+  width:100%;
+  max-width:360px;
+  background:#fff;
+  border:1px solid #dbeafe;
+  border-radius:24px;
+  padding:24px 20px 18px;
+  box-shadow:0 24px 70px rgba(15,23,42,.28);
+  text-align:center;
+}
+#ppc-pwa-install-icon{
+  width:72px;
+  height:72px;
+  border-radius:18px;
+  display:block;
+  margin:0 auto 14px;
+  box-shadow:0 8px 22px rgba(29,78,216,.18);
+}
+#ppc-pwa-install-title{font-size:20px;font-weight:1000;color:#0f172a;letter-spacing:-.04em;}
+#ppc-pwa-install-desc{margin-top:8px;font-size:13px;font-weight:700;line-height:1.55;color:#64748b;letter-spacing:-.02em;}
+#ppc-pwa-install-btn{
+  width:100%;height:50px;margin-top:18px;border:0;border-radius:14px;
+  background:linear-gradient(180deg,#075dff 0%,#0036c9 100%);
+  color:#fff;font-size:15px;font-weight:1000;
+  box-shadow:0 9px 20px rgba(0,70,210,.23);
+}
+#ppc-pwa-install-later{
+  width:100%;height:42px;margin-top:6px;border:0;background:transparent;
+  color:#64748b;font-size:12px;font-weight:900;
+}
+</style>
+
+<div id="ppc-pwa-install-prompt" aria-hidden="true">
+  <div id="ppc-pwa-install-card" role="dialog" aria-modal="true" aria-labelledby="ppc-pwa-install-title">
+    <img id="ppc-pwa-install-icon" src="./ppc-icon-192.png" alt="PPC 앱 아이콘">
+    <div id="ppc-pwa-install-title">PPC 앱 설치하기</div>
+    <div id="ppc-pwa-install-desc">홈 화면에 설치하면 주소창 없이<br>일반 앱처럼 바로 실행할 수 있습니다.</div>
+    <button id="ppc-pwa-install-btn" type="button">앱 설치하기</button>
+    <button id="ppc-pwa-install-later" type="button">나중에</button>
+  </div>
+</div>
+
+<script id="ppc-pwa-install-prompt-script">
+(function(){
+  var deferredPrompt = null;
+  var promptEl = document.getElementById('ppc-pwa-install-prompt');
+  var installBtn = document.getElementById('ppc-pwa-install-btn');
+  var laterBtn = document.getElementById('ppc-pwa-install-later');
+  var dismissedThisPage = false;
+
+  function isStandalone(){
+    return window.matchMedia('(display-mode: standalone)').matches ||
+           window.navigator.standalone === true;
+  }
+
+  function showPrompt(){
+    if(!promptEl || dismissedThisPage || isStandalone() || !deferredPrompt) return;
+    promptEl.classList.add('show');
+    promptEl.setAttribute('aria-hidden','false');
+  }
+
+  function hidePrompt(){
+    if(!promptEl) return;
+    promptEl.classList.remove('show');
+    promptEl.setAttribute('aria-hidden','true');
+  }
+
+  window.addEventListener('beforeinstallprompt', function(e){
+    e.preventDefault();
+    deferredPrompt = e;
+    if(document.readyState === 'complete'){
+      setTimeout(showPrompt, 700);
+    }else{
+      window.addEventListener('load', function(){ setTimeout(showPrompt,700); }, {once:true});
+    }
+  });
+
+  if(installBtn){
+    installBtn.addEventListener('click', async function(){
+      if(!deferredPrompt){ hidePrompt(); return; }
+      hidePrompt();
+      try{
+        deferredPrompt.prompt();
+        await deferredPrompt.userChoice;
+      }catch(err){
+        console.warn('PPC install prompt failed:', err);
+      }
+      deferredPrompt = null;
+    });
+  }
+
+  if(laterBtn){
+    laterBtn.addEventListener('click', function(){
+      dismissedThisPage = true;
+      hidePrompt();
+    });
+  }
+
+  window.addEventListener('appinstalled', function(){
+    deferredPrompt = null;
+    hidePrompt();
+  });
+})();
+</script>
+
 <script id="ppc-pwa-register">
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {
   window.addEventListener('load', function () {
