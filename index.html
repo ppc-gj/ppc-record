@@ -822,6 +822,25 @@ button[onclick="toggleAuthMode('signup')"]{
             <div id="practical-content" class="hidden"></div>
         </section>
 
+
+        <!-- View 6: 정시 실기 화면 -->
+        <section id="regular-view" class="view-section hidden-view flex-1 bg-[#eef5ff] min-h-screen pb-24">
+            <div class="bg-gradient-to-br from-[#00319b] via-[#0042d8] to-[#002579] text-white px-4 pt-2 pb-4 shadow-md relative overflow-hidden">
+                <div class="absolute right-0 top-0 w-40 h-24 bg-white/10 blur-2xl rounded-full"></div>
+                <div class="flex items-center justify-between relative z-10">
+                    <button onclick="showView('measure')" class="w-8 h-8 flex items-center justify-center text-white/90 text-xl">‹</button>
+                    <h4 class="font-black text-lg tracking-tight">정시실기</h4>
+                    <div class="w-8"></div>
+                </div>
+                <p class="text-center text-[11px] font-bold text-blue-100 mt-1">정시 실기 정보를 준비하고 있습니다</p>
+            </div>
+            <div class="px-4 pt-20 flex flex-col items-center justify-center text-center">
+                <div class="w-20 h-20 rounded-full bg-white border border-blue-100 shadow-lg flex items-center justify-center text-4xl mb-5">🚧</div>
+                <h3 class="text-xl font-black text-slate-800">준비중입니다</h3>
+                <p class="text-xs font-bold text-slate-400 mt-2">정시실기 기능을 곧 업데이트할 예정입니다.</p>
+            </div>
+        </section>
+
 <!-- 관리자 회원관리 -->
 
 <section id="admin-student-best-view" class="view-section hidden-view flex-1 p-6 space-y-4">
@@ -974,6 +993,10 @@ button[onclick="toggleAuthMode('signup')"]{
             <button onclick="showView('practical')" id="nav-practical" class="nav-btn nav-inactive flex flex-col items-center gap-1 w-16">
                 <span class="text-2xl drop-shadow-sm opacity-80">🏫</span>
                 <span class="text-[9px] font-bold whitespace-nowrap">수시실기</span>
+            </button>
+            <button onclick="showView('regular')" id="nav-regular" class="nav-btn nav-inactive flex flex-col items-center gap-1 w-16">
+                <span class="text-2xl drop-shadow-sm opacity-80">🎯</span>
+                <span class="text-[9px] font-bold whitespace-nowrap">정시실기</span>
             </button>
             <button onclick="showView('profile')" id="nav-profile" class="nav-btn nav-inactive flex flex-col items-center gap-1 w-16">
                 <span class="text-2xl drop-shadow-sm opacity-80">⚙️</span>
