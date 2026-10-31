@@ -5972,6 +5972,8 @@ function regMethodHtml(d){return `<div class="reg-card"><b>실기종목 안내</
 function regInput(k,v){let d=regCurrent();if(!d)return;let e=regEntries[regKey(d)]||{sat:'',school:'',events:{}};e[k]=v;regEntries[regKey(d)]=e;regUpdateSummary();regQueueSave()}
 function regEventInput(i,v){let d=regCurrent();if(!d)return;let e=regEntries[regKey(d)]||{sat:'',school:'',events:{}};e.events=e.events||{};e.events[i]=v;regEntries[regKey(d)]=e;regUpdateSummary();regQueueSave()}
 function regEventScore(d,i,raw,gender){
+if(raw===null||raw===undefined||String(raw).trim()===''||!gender)return null;
+
 
 if(d.name==='안양대학교'){
  const v=Number(raw),male=gender==='male';
