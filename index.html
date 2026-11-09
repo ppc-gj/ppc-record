@@ -1222,7 +1222,7 @@ button[onclick="toggleAuthMode('signup')"]{
 
             <div class="measure-stack">
                 <div class="measure-card record-card">
-                    <div class="measure-card-title"><span>📅</span> 오늘의 기록 입력</div>
+                    <div class="measure-card-title" style="justify-content:space-between"><span>📅 오늘의 기록 입력</span><button onclick="showView('table')" style="margin-left:auto;background:#e8f0ff;color:#0b4bc5;border-radius:8px;padding:7px 12px;font-weight:900">📋 배점표</button></div>
                     <div class="measure-grid two">
                         <div class="select-wrap">
                             <input type="date" id="measure-date" class="measure-field">
@@ -1569,6 +1569,7 @@ button[onclick="toggleAuthMode('signup')"]{
         </div>
 
         <section id="regular-view" class="view-section hidden-view flex-1"><div id="regular-root"></div></section>
+        <section id="journal-view" class="view-section hidden-view flex-1 p-4" style="padding-bottom:110px;background:#eef5ff"><div id="ppc-journal-root"></div></section>
         <!-- Bottom Navigation -->
         <nav class="fixed bottom-0 left-0 right-0 max-w-md mx-auto glass h-20 flex items-center justify-around px-2 rounded-t-[2.5rem] z-50 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)] pb-safe">
             <button onclick="showView('measure')" id="nav-measure" class="nav-btn nav-active flex flex-col items-center gap-1 w-16">
@@ -1579,9 +1580,9 @@ button[onclick="toggleAuthMode('signup')"]{
                 <span class="text-2xl drop-shadow-sm opacity-80">📈</span>
                 <span class="text-[10px] font-bold">통계</span>
             </button>
-            <button onclick="showView('table')" id="nav-table" class="nav-btn nav-inactive flex flex-col items-center gap-1 w-16">
+            <button onclick="showView('journal')" id="nav-journal" class="nav-btn nav-inactive flex flex-col items-center gap-1 w-16">
                 <span class="text-2xl drop-shadow-sm opacity-80">📋</span>
-                <span class="text-[10px] font-bold">배점표</span>
+                <span class="text-[10px] font-bold">운동일지</span>
             </button>
             <button onclick="showView('practical')" id="nav-practical" class="nav-btn nav-inactive flex flex-col items-center gap-1 w-16">
                 <span class="text-2xl drop-shadow-sm opacity-80">🏫</span>
@@ -1615,6 +1616,7 @@ button[onclick="toggleAuthMode('signup')"]{
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-storage-compat.js"></script>
 
     <!-- JavaScript Logic -->
     <script>
@@ -2046,6 +2048,7 @@ button[onclick="toggleAuthMode('signup')"]{
                 renderPracticalTable();
             }
             if(vid === 'regular') { regularOpen(); }
+            if(vid === 'journal') { ppcJournalOpen(); }
             
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
@@ -6441,6 +6444,64 @@ async function regSaveSnapshot(){const d=regCurrent();if(!d)return;const snapsho
  }catch(err){console.error('정시 점수 이력 저장 실패',err);if(status)status.textContent='⚠ 점수 이력 저장 실패 · 로그인/권한/네트워크 확인';}}
 function regQueueSave(){let s=document.getElementById('reg-save-status');if(s)s.textContent='저장 대기 중…';clearTimeout(regSaveTimer);regSaveTimer=setTimeout(regSave,650)}
 async function regSave(){if(typeof currentUser==='undefined'||!currentUser?.id)return;try{const docId=currentUser.docId||getUserDocId(currentUser.id);await db.collection('users').doc(docId).set({regularAdmissions2027:regEntries},{merge:true});regSaveState='✓ 자동저장 완료';let s=document.getElementById('reg-save-status');if(s)s.textContent=regSaveState}catch(err){console.error('정시실기 저장 실패',err);regSaveState='⚠ 저장 실패 · 네트워크/권한 확인';let s=document.getElementById('reg-save-status');if(s)s.textContent=regSaveState}}
+</script>
+<style>
+.ppcj-card{background:#fff;border:1px solid #dbe7fa;border-radius:15px;padding:15px;margin-bottom:12px;box-shadow:0 4px 14px #173b7610}.ppcj-title{font-size:19px;font-weight:1000;color:#07398d;margin:7px 0 14px}.ppcj-input{width:100%;border:1px solid #d5e1f3;background:#f9fbff;border-radius:9px;padding:10px;font-size:13px;margin:5px 0 9px;color:#152c55}.ppcj-btn{background:#0c51d7;color:white;border-radius:9px;padding:11px 14px;font-size:13px;font-weight:900}.ppcj-outline{background:#edf4ff;color:#164ca9}.ppcj-muted{font-size:11px;color:#64748b;line-height:1.6}.ppcj-item{border:1px solid #dce7f5;border-radius:12px;padding:12px;margin:9px 0}.ppcj-video{width:100%;max-height:280px;background:#091529;border-radius:10px}.ppcj-canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:crosshair}.ppcj-video-wrap{position:relative}.ppcj-video-wrap canvas{pointer-events:none}.ppcj-video-wrap.ppcj-draw canvas{pointer-events:auto}.ppcj-chip{display:inline-block;background:#e8f1ff;color:#0d4aab;padding:4px 7px;border-radius:6px;font-size:11px;font-weight:800;margin-right:5px}
+</style>
+<script>
+/* PPC 운동일지: 기존 자체 로그인 기반의 기능 연결. 보안 규칙은 별도 배포 필요. */
+let ppcjItems=[{sport:'',content:'',videoUrl:'',videoPath:''}],ppcjFeeling='',ppcjDate='',ppcjSelected=null,ppcjLoaded=[],ppcjBusy=false;
+const ppcjRoot=()=>document.getElementById('ppc-journal-root');
+const ppcjEsc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const ppcjUser=()=>typeof currentUser!=='undefined'?currentUser:null;
+const ppcjStaff=()=>['강사','대표'].includes(String(ppcjUser()?.role||''));
+const ppcjUid=()=>String(ppcjUser()?.docId||ppcjUser()?.id||'');
+const ppcjBranch=()=>String(ppcjUser()?.branch||'').trim();
+const ppcjToday=()=>{let d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-')};
+const ppcjDocId=(u,d)=>encodeURIComponent(u)+'_'+d;
+const ppcjDb=()=>db.collection('workoutJournals');
+function ppcjNotice(msg,ok=true){if(typeof showToast==='function')showToast(msg,ok?'success':'error');else alert(msg)}
+function ppcjError(e){console.error('운동일지 오류',e);ppcjNotice('저장/조회 실패: Firebase 권한 및 인터넷 연결을 확인하세요.',false)}
+function ppcjSportOptions(v){let a=typeof MASTER_DATA!=='undefined'?Object.keys(MASTER_DATA):[];return '<option value="">종목 선택</option>'+a.map(x=>'<option '+(x===v?'selected':'')+' value="'+ppcjEsc(x)+'">'+ppcjEsc(x)+'</option>').join('')+'<option value="기타" '+(v==='기타'?'selected':'')+'>기타</option>'}
+async function ppcJournalOpen(){if(!ppcjUser()){ppcjRoot().innerHTML='<div class="ppcj-card">로그인이 필요합니다.</div>';return}if(ppcjStaff())await ppcjStaffList();else await ppcjStudentOpen()}
+async function ppcjStudentOpen(date){ppcjDate=date||ppcjDate||ppcjToday();try{const snap=await ppcjDb().doc(ppcjDocId(ppcjUid(),ppcjDate)).get();let d=snap.exists?snap.data():{};ppcjItems=(Array.isArray(d.items)&&d.items.length?d.items:[{sport:'',content:'',videoUrl:'',videoPath:''}]).map(x=>({...x}));ppcjFeeling=d.feeling||'';ppcjSelected=d;ppcjStudentRender()}catch(e){ppcjError(e);ppcjRoot().innerHTML='<div class="ppcj-card">운동일지를 불러오지 못했습니다. Firestore 규칙을 확인하세요.</div>'}}
+function ppcjStudentRender(){let d=ppcjSelected||{};ppcjRoot().innerHTML=`<h2 class="ppcj-title">📝 나의 운동일지</h2><div class="ppcj-card"><label class="ppcj-muted">운동 날짜</label><input class="ppcj-input" type="date" id="ppcj-date" value="${ppcjEsc(ppcjDate)}" onchange="ppcjStudentOpen(this.value)"><div id="ppcj-entry-list">${ppcjItems.map((x,i)=>ppcjEntryHtml(x,i)).join('')}</div><button class="ppcj-btn ppcj-outline" onclick="ppcjAdd()">＋ 종목 / 내용 추가</button><label class="ppcj-muted" style="display:block;margin-top:16px">오늘 운동 후 느낀 점</label><textarea id="ppcj-feeling" class="ppcj-input" rows="4" placeholder="오늘 운동에서 느낀 점">${ppcjEsc(ppcjFeeling)}</textarea><button class="ppcj-btn" style="width:100%" type="button" id="ppcj-save-button" onclick="ppcjSave()">운동일지 저장 / 수정</button><div id="ppcj-save-status" role="status" aria-live="polite" style="font-size:12px;font-weight:800;color:#1d4ed8;margin-top:10px;white-space:pre-wrap"></div></div>${d.feedback?`<div class="ppcj-card"><b>💬 강사·대표 피드백</b><p style="white-space:pre-wrap;margin:10px 0">${ppcjEsc(d.feedback)}</p><span class="ppcj-muted">${ppcjEsc(d.feedbackAuthor||'')}</span>${(d.annotations||[]).length?'영상 표시가 저장되어 있습니다.':''}</div>`:''}<div class="ppcj-card"><b>최근 작성한 운동일지</b><div id="ppcj-history" class="ppcj-muted" style="margin-top:8px">불러오는 중...</div></div>`;ppcjStudentHistory();ppcjItems.forEach((x,i)=>{if(x.videoUrl)ppcjStudentCanvas(i)});}
+function ppcjEntryHtml(x,i){return `<div class="ppcj-item"><div style="display:flex;justify-content:space-between;align-items:center"><b>종목 ${i+1}</b><button onclick="ppcjRemove(${i})" style="color:#e11d48;font-size:12px">삭제</button></div><select class="ppcj-input" id="ppcj-sport-${i}">${ppcjSportOptions(x.sport)}</select><textarea class="ppcj-input" id="ppcj-content-${i}" rows="3" placeholder="운동 내용, 횟수, 세트, 기록">${ppcjEsc(x.content)}</textarea>${x.videoUrl?`<div class="ppcj-video-wrap"><video id="ppcj-student-video-${i}" class="ppcj-video" controls preload="metadata" src="${ppcjEsc(x.videoUrl)}"></video><canvas id="ppcj-student-canvas-${i}" class="ppcj-canvas"></canvas></div><span class="ppcj-chip">기존 영상 유지 (새 파일 선택 시 교체)</span>`:''}</div>`}
+function ppcjStudentCanvas(i){let v=document.getElementById('ppcj-student-video-'+i),c=document.getElementById('ppcj-student-canvas-'+i);if(!v||!c)return;c.width=800;c.height=450;const marks=(ppcjSelected.annotations||[]).filter(x=>x.index===i);function paint(){let ctx=c.getContext('2d');ctx.clearRect(0,0,c.width,c.height);marks.filter(x=>Math.abs(x.time-v.currentTime)<.6).forEach(s=>{ctx.beginPath();ctx.strokeStyle='#ff325b';ctx.lineWidth=5;ctx.lineCap='round';s.points.forEach((p,j)=>j?ctx.lineTo(p[0]*c.width,p[1]*c.height):ctx.moveTo(p[0]*c.width,p[1]*c.height));ctx.stroke()})}v.addEventListener('timeupdate',paint);v.addEventListener('seeked',paint)}
+function ppcjCapture(){ppcjItems=ppcjItems.map((x,i)=>({...x,sport:document.getElementById('ppcj-sport-'+i)?.value||'',content:document.getElementById('ppcj-content-'+i)?.value||''}));ppcjFeeling=document.getElementById('ppcj-feeling')?.value||''}
+function ppcjAdd(){ppcjCapture();ppcjItems.push({sport:'',content:'',videoUrl:'',videoPath:''});ppcjStudentRender()}
+function ppcjRemove(i){ppcjCapture();ppcjItems.splice(i,1);if(!ppcjItems.length)ppcjItems.push({sport:'',content:'',videoUrl:'',videoPath:''});ppcjStudentRender()}
+function ppcjSaveStatus(msg, error=false){const el=document.getElementById('ppcj-save-status');if(el){el.textContent=msg;el.style.color=error?'#dc2626':'#1d4ed8'}const b=document.getElementById('ppcj-save-button');if(b){b.disabled=ppcjBusy;b.style.opacity=ppcjBusy?'.65':'1';b.textContent=ppcjBusy?'저장 중…':'운동일지 저장 / 수정'}}
+function ppcjDeadline(p,ms,label){return Promise.race([p,new Promise((_,reject)=>setTimeout(()=>reject(new Error(label+' 응답이 지연됩니다. 네트워크 및 Firebase 권한을 확인하세요.')),ms))])}
+async function ppcjSave(){
+ if(ppcjBusy)return;
+ try{ppcjCapture()}catch(e){ppcjSaveStatus('입력 내용을 읽지 못했습니다: '+e.message,true);return}
+ if(!ppcjUser()?.id){ppcjSaveStatus('로그인 정보가 없습니다. 다시 로그인해 주세요.',true);return}
+ if(!ppcjBranch()){ppcjSaveStatus('소속 지점 정보가 없습니다. 계정의 지점 설정을 확인해 주세요.',true);return}
+ if(!ppcjItems.some(x=>x.sport&&x.content.trim())){ppcjSaveStatus('종목을 선택하고 운동 내용을 입력해 주세요.',true);return}
+ ppcjBusy=true;
+ const button=document.getElementById('ppcj-save-button');
+ if(button){button.disabled=true;button.style.opacity='.65';button.textContent='저장 중…'}
+ ppcjSaveStatus('운동일지 저장 중…');
+ const old=ppcjSelected||{};
+ const payload={userId:ppcjUid(),studentId:ppcjUser().id||'',studentName:ppcjUser().name||'',branch:ppcjBranch(),date:ppcjDate,items:ppcjItems.map(x=>({sport:x.sport,content:x.content,videoUrl:x.videoUrl||'',videoPath:x.videoPath||''})),feeling:ppcjFeeling,feedback:old.feedback||'',feedbackAuthor:old.feedbackAuthor||'',annotations:old.annotations||[],updatedAt:firebase.firestore.FieldValue.serverTimestamp()};
+ try{
+  await ppcjDeadline(ppcjDb().doc(ppcjDocId(ppcjUid(),ppcjDate)).set(payload,{merge:true}),20000,'운동일지 저장');
+  ppcjSaveStatus('✓ 운동일지가 저장되었습니다.');
+  ppcjNotice('운동일지가 저장되었습니다.');
+  await ppcjStudentOpen(ppcjDate);
+ }catch(e){console.error('운동일지 저장 오류',e);ppcjSaveStatus('저장 실패'+(e?.code?' ['+e.code+']':'')+': '+(e?.message||String(e)),true)}
+ finally{ppcjBusy=false;const b=document.getElementById('ppcj-save-button');if(b){b.disabled=false;b.style.opacity='1';b.textContent='운동일지 저장 / 수정'}}
+}
+async function ppcjStudentHistory(){try{let snap=await ppcjDb().where('userId','==',ppcjUid()).get();let rows=snap.docs.map(d=>d.data()).sort((a,b)=>b.date.localeCompare(a.date));document.getElementById('ppcj-history').innerHTML=rows.length?rows.slice(0,40).map(r=>`<button class="ppcj-input" style="text-align:left" onclick="ppcjStudentOpen('${ppcjEsc(r.date)}')">${ppcjEsc(r.date)} · ${ppcjEsc((r.items||[]).map(x=>x.sport).filter(Boolean).join(', '))} ${r.feedback?'💬':''}</button>`).join(''):'아직 저장한 운동일지가 없습니다.'}catch(e){let n=document.getElementById('ppcj-history');if(n)n.textContent='목록 조회 권한을 확인하세요.'}}
+async function ppcjStaffList(){if(!ppcjBranch()){ppcjRoot().innerHTML='<div class="ppcj-card">계정에 소속 지점이 설정되지 않았습니다.</div>';return}ppcjRoot().innerHTML=`<h2 class="ppcj-title">📚 ${ppcjEsc(ppcjBranch())}지점 학생 운동일지</h2><div class="ppcj-card"><label class="ppcj-muted">날짜 / 학생 이름 검색</label><div style="display:flex;gap:7px"><input type="date" class="ppcj-input" id="ppcj-filter-date"><input class="ppcj-input" id="ppcj-filter-name" placeholder="학생 이름"></div><button class="ppcj-btn ppcj-outline" onclick="ppcjStaffFilter()">조회</button><button class="ppcj-btn ppcj-outline" onclick="document.getElementById('ppcj-filter-date').value='';document.getElementById('ppcj-filter-name').value='';ppcjStaffFilter()">전체</button></div><div id="ppcj-staff-results" class="ppcj-card">불러오는 중...</div>`;try{const snap=await ppcjDb().where('branch','==',ppcjBranch()).get();ppcjLoaded=snap.docs.map(x=>({docId:x.id,...x.data()})).sort((a,b)=>(b.date||'').localeCompare(a.date||''));ppcjStaffFilter()}catch(e){ppcjError(e);document.getElementById('ppcj-staff-results').textContent='조회 실패: Firestore 규칙 및 지점 설정을 확인하세요.'}}
+function ppcjStaffFilter(){let date=document.getElementById('ppcj-filter-date')?.value||'',name=document.getElementById('ppcj-filter-name')?.value.trim()||'';let rows=ppcjLoaded.filter(x=>(!date||x.date===date)&&(!name||String(x.studentName||'').includes(name)));document.getElementById('ppcj-staff-results').innerHTML=rows.length?rows.map(r=>`<button class="ppcj-input" style="text-align:left" onclick="ppcjStaffDetail('${ppcjEsc(r.docId)}')"><b>${ppcjEsc(r.studentName)} · ${ppcjEsc(r.date)}</b><br><span class="ppcj-muted">${ppcjEsc((r.items||[]).map(x=>x.sport).filter(Boolean).join(' / '))} ${r.feedback?'· 피드백 완료':''}</span></button>`).join(''):'해당 조건의 운동일지가 없습니다.'}
+function ppcjStaffDetail(id){let r=ppcjLoaded.find(x=>x.docId===id);if(!r)return;ppcjSelected=r;ppcjRoot().innerHTML=`<button class="ppcj-btn ppcj-outline" onclick="ppcjStaffList()">← 목록으로</button><h2 class="ppcj-title">${ppcjEsc(r.studentName)} · ${ppcjEsc(r.date)}</h2>${(r.items||[]).map((x,i)=>`<div class="ppcj-card"><b>${ppcjEsc(x.sport||'종목 미선택')}</b><p style="white-space:pre-wrap;font-size:13px;margin:10px 0">${ppcjEsc(x.content)}</p>${x.videoUrl?`<div class="ppcj-video-wrap" id="ppcj-wrap-${i}"><video id="ppcj-video-${i}" class="ppcj-video" controls playsinline preload="metadata" src="${ppcjEsc(x.videoUrl)}"></video><canvas class="ppcj-canvas" id="ppcj-canvas-${i}"></canvas></div><div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:8px"><button class="ppcj-btn ppcj-outline" onclick="ppcjSpeed(${i},.25)">0.25배</button><button class="ppcj-btn ppcj-outline" onclick="ppcjSpeed(${i},.5)">0.5배</button><button class="ppcj-btn ppcj-outline" onclick="ppcjSpeed(${i},1)">1배</button><button class="ppcj-btn ppcj-outline" onclick="ppcjDrawToggle(${i})">✏️ 정지·그리기</button><button class="ppcj-btn ppcj-outline" onclick="ppcjClearDrawing(${i})">표시 지우기</button></div><p class="ppcj-muted">영상 정지 후 그린 선은 현재 재생 시점과 함께 저장됩니다.</p>`:''}</div>`).join('')}<div class="ppcj-card"><b>학생 느낀 점</b><p style="white-space:pre-wrap;font-size:13px;margin-top:9px">${ppcjEsc(r.feeling||'작성 없음')}</p></div><div class="ppcj-card"><b>💬 강사·대표 피드백</b><textarea id="ppcj-feedback" class="ppcj-input" rows="5" placeholder="학생에게 전달할 피드백">${ppcjEsc(r.feedback||'')}</textarea><button class="ppcj-btn" onclick="ppcjSaveFeedback()">피드백 및 영상 표시 저장</button></div>`;(r.items||[]).forEach((x,i)=>{if(x.videoUrl)ppcjInitCanvas(i)});}
+let ppcjStrokes={};function ppcjSpeed(i,v){let el=document.getElementById('ppcj-video-'+i);if(el)el.playbackRate=v}
+function ppcjInitCanvas(i){const c=document.getElementById('ppcj-canvas-'+i),v=document.getElementById('ppcj-video-'+i);if(!c||!v)return;c.width=800;c.height=450;const key=ppcjSelected.docId+':'+i;ppcjStrokes[key]=(ppcjSelected.annotations||[]).filter(x=>x.index===i).map(x=>({...x}));let drawing=false,stroke=null;function point(e){let b=c.getBoundingClientRect();return [(e.clientX-b.left)/b.width,(e.clientY-b.top)/b.height]};function redraw(){let ctx=c.getContext('2d');ctx.clearRect(0,0,c.width,c.height);const t=v.currentTime;ppcjStrokes[key].filter(s=>Math.abs(s.time-t)<.6).forEach(s=>{ctx.strokeStyle='#ff325b';ctx.lineWidth=5;ctx.lineCap='round';ctx.beginPath();s.points.forEach((p,j)=>j?ctx.lineTo(p[0]*c.width,p[1]*c.height):ctx.moveTo(p[0]*c.width,p[1]*c.height));ctx.stroke()})}v.addEventListener('timeupdate',redraw);v.addEventListener('seeked',redraw);c.addEventListener('pointerdown',e=>{if(!c.parentElement.classList.contains('ppcj-draw'))return;drawing=true;stroke={index:i,time:v.currentTime,points:[point(e)]};ppcjStrokes[key].push(stroke);c.setPointerCapture(e.pointerId);redraw()});c.addEventListener('pointermove',e=>{if(!drawing)return;stroke.points.push(point(e));redraw()});c.addEventListener('pointerup',()=>drawing=false);redraw()}
+function ppcjDrawToggle(i){let v=document.getElementById('ppcj-video-'+i),w=document.getElementById('ppcj-wrap-'+i);v.pause();w.classList.toggle('ppcj-draw');ppcjNotice(w.classList.contains('ppcj-draw')?'화면에 선을 그릴 수 있습니다.':'그리기를 종료했습니다.')}
+function ppcjClearDrawing(i){let key=ppcjSelected.docId+':'+i;ppcjStrokes[key]=[];let c=document.getElementById('ppcj-canvas-'+i);c?.getContext('2d').clearRect(0,0,c.width,c.height)}
+async function ppcjSaveFeedback(){let r=ppcjSelected;if(!r||!ppcjStaff()||r.branch!==ppcjBranch())return ppcjNotice('조회 권한이 없습니다.',false);let feedback=document.getElementById('ppcj-feedback').value;let annotations=(r.annotations||[]).filter(x=>!Object.hasOwn(ppcjStrokes,r.docId+':'+x.index));for(let i=0;i<(r.items||[]).length;i++){let k=r.docId+':'+i;if(ppcjStrokes[k])annotations.push(...ppcjStrokes[k])}try{await ppcjDb().doc(r.docId).update({feedback,feedbackAuthor:ppcjUser().name||'강사',feedbackAt:firebase.firestore.FieldValue.serverTimestamp(),annotations});r.feedback=feedback;r.annotations=annotations;ppcjNotice('피드백이 저장되었습니다. 학생 운동일지에서 확인할 수 있습니다.')}catch(e){ppcjError(e)}}
 </script>
 </body>
 </html>
